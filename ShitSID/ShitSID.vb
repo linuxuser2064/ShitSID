@@ -1,6 +1,11 @@
 ﻿Public Class ShitSID
+    Public Filter As New SIDFilter(44100)
     Public Voices(2) As Voice
     Public currentTime As Double = 0
+    Public filterCutoffLo As Integer = 0
+    Public filterCutoffHi As Integer = 0
+    Public filterResonance As Integer = 0
+    Public filterMode As Integer = 0 ' 0-7 (bit flags)
     Public Sub New()
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
@@ -18,6 +23,48 @@
         Return Math.Max(-1, Math.Min(1, output / 3))
     End Function
     Public Sub WriteRegister(addr As Integer, value As Byte)
+        ' das filter
+        Select Case addr
+            Case &HD415
+                Dim bits As New BitArray({value})
+                filterCutoffLo = 0
+                If bits(0) Then
+                    filterCutoffLo += 1
+                End If
+                If bits(1) Then
+                    filterCutoffLo += 2
+                End If
+                If bits(2) Then
+                    filterCutoffLo += 4
+                End If
+                UpdateFilterSettings()
+                Return
+            Case &HD416
+                filterCutoffHi = value
+                UpdateFilterSettings()
+                Return
+            Case &HD417
+                filterResonance = (value >> 4) And &HF
+                Voices(0).UseFilter = (value And 1) <> 0
+                Voices(1).UseFilter = (value And 2) <> 0
+                Voices(2).UseFilter = (value And 4) <> 0
+                UpdateFilterSettings()
+                Return
+            Case &HD418
+                Dim bits As New BitArray({value})
+                filterMode = 0
+                If bits(4) Then
+                    filterMode += SIDFilter.EFilterType.LowPass
+                End If
+                If bits(5) Then
+                    filterMode += SIDFilter.EFilterType.BandPass
+                End If
+                If bits(6) Then
+                    filterMode += SIDFilter.EFilterType.HighPass
+                End If
+                UpdateFilterSettings()
+                Return
+        End Select
         Dim reg = addr And &H1F
         Dim voiceNum = reg \ 7
         If voiceNum > 2 Then Return
@@ -35,7 +82,7 @@
                 voice.PulseWidthLo = value
                 voice.UpdateDutyCycle()
             Case 3 ' PW HI
-                voice.PulseWidthHi = value And &HF
+                voice.PulseWidthHi = value
                 voice.UpdateDutyCycle()
             Case 4 ' CONTROL REG
                 voice.Control = value
@@ -71,6 +118,21 @@
                 voice.Envelope.Release = value And &HF
         End Select
     End Sub
+    Private Sub UpdateFilterSettings()
+        Dim msbPart As Integer = filterCutoffHi << 3
+        Dim lsbPart As Integer = filterCutoffLo And &H7 ' Mask just the lowest 3 bits
+        Dim combined As UShort = CUInt(msbPart Or lsbPart)
+        Dim cutoff = combined
+        Filter.SetCutoff(cutoff)
+        Filter.SetResonance(filterResonance)
+
+        Dim mode As SIDFilter.EFilterType = SIDFilter.EFilterType.None
+        If (filterMode And 1) <> 0 Then mode = mode Or SIDFilter.EFilterType.LowPass
+        If (filterMode And 2) <> 0 Then mode = mode Or SIDFilter.EFilterType.BandPass
+        If (filterMode And 4) <> 0 Then mode = mode Or SIDFilter.EFilterType.HighPass
+
+        Filter.SetFilterType(mode)
+    End Sub
 End Class
 Public Class Voice
     Private Index As Int32
@@ -92,6 +154,7 @@ Public Class Voice
     Public PulseWidthHi As Byte = 0
     Private lastNoiseUpdate As Double = 0
     Private currentNoise As Double = 0
+    Public UseFilter As Boolean = False
     Public Sub New(parent As ShitSID, i As Int32)
         Me.Parent = parent
         Me.Index = i
@@ -126,6 +189,7 @@ Public Class Voice
         lastTime = time
         Dim wave As Double
         If (Control And &H8) <> 0 Then ' test bit
+            Envelope.attackStartLevel = 0
             Return Envelope.GetLevel(time)
         End If
         If MuteVoice Then Return 0
@@ -178,7 +242,9 @@ Public Class Voice
             Dim modulator As Double = 1.0 - 4 * Math.Abs(sourceVoice.phase - 0.5)
             wave *= If(modulator > 0, 1, -1)
         End If
-
+        If UseFilter Then
+            Return Parent.Filter.ApplyFilter(wave * envLevel)
+        End If
         Return wave * envLevel
     End Function
 End Class
@@ -187,11 +253,15 @@ Public Class ADSR
     Public Decay As Integer = 0      ' 0–15
     Public Sustain As Double = 15   ' 0-15
     Public Release As Integer = 0    ' 0–15
-    Private releaseStartLevel As Double = 0
-    Private state As String = "idle"
-    Private level As Double = 0
-    Private startTime As Double = 0
-    Private decayStartLevel As Double
+    Public releaseStartLevel As Double = 0
+    Public state As String = "idle"
+    Public level As Double = 0
+    Public startTime As Double = 0
+    Public decayStartLevel As Double
+    Public attackStartLevel As Double = 0
+    Public Overrides Function ToString() As String
+        Return $"A:{Attack} D:{Decay} S:{Sustain} R:{Release}, State: {state}, Level: {(CInt(level * 10) / 10).ToString}"
+    End Function
     Private Function RateToTime(rate As Integer, stage As String) As Double
         ' SID ADSR map
         Dim attackTimes() As Double = {0.002, 0.008, 0.016, 0.024, 0.038, 0.056, 0.068, 0.08, 0.1, 0.25, 0.5, 0.8, 1.0, 3.0, 5.0, 8.0}
@@ -214,13 +284,17 @@ Public Class ADSR
                 Return 0.1
         End Select
     End Function
+
     Public Function IsIdle() As Boolean
         Return state = "idle"
     End Function
+
     Public Sub NoteOn(currentTime As Double)
+        attackStartLevel = level  ' Remember where we were
         startTime = currentTime
         state = "attack"
     End Sub
+
 
     Public Sub NoteOff(currentTime As Double)
         releaseStartLevel = level
@@ -234,11 +308,13 @@ Public Class ADSR
         Select Case state
             Case "attack"
                 Dim dur = RateToTime(Attack, "attack")
-                level = Math.Min(1.0, t / dur)
+                level = attackStartLevel + (1.0 - attackStartLevel) * (t / dur)
                 If level >= 1.0 Then
+                    level = 1.0
                     state = "decay"
                     startTime = currentTime
                 End If
+
 
             Case "decay"
                 Dim k = RateToTime(Decay, "decay")
@@ -250,9 +326,8 @@ Public Class ADSR
                     startTime = currentTime
                 End If
 
-
             Case "sustain"
-                level = Sustain / 15.0 ' this took ages to get working
+                level = Sustain / 15.0 ' Sustain phase is constant
 
             Case "release"
                 Dim k = RateToTime(Release, "release")
@@ -269,4 +344,101 @@ Public Class ADSR
 
         Return level
     End Function
+End Class
+Public Class SIDFilter
+    <Flags>
+    Public Enum EFilterType
+        None = 0
+        LowPass = 1
+        BandPass = 2
+        HighPass = 4
+    End Enum
+
+    Private filterType As EFilterType = EFilterType.LowPass
+    Private resonance As Double = 0.0 ' 0.0 to 1.0
+    Private cutoffVal As Integer = 0
+    Private sampleRate As Double = 44100.0
+    Private bandpass As Double = 0.0
+    Private lowpass As Double = 0.0
+    Private highpass As Double = 0.0
+    Public CutoffMultiplier As Double = 1.67
+    Public CutoffBias As Int32 = 0
+    Public ResonanceDivider As Double = 3
+    ' approx filter curve
+    Private ReadOnly cutoffCurve As New List(Of Tuple(Of Integer, Double)) From {
+        Tuple.Create(0, 200.0),
+        Tuple.Create(250, 1600.0),
+        Tuple.Create(900, 6000.0),
+        Tuple.Create(1000, 7000.0),
+        Tuple.Create(1250, 8100.0),
+        Tuple.Create(1500, 10000.0),
+        Tuple.Create(1750, 12500.0),
+        Tuple.Create(2000, 13500.0),
+        Tuple.Create(2047, 13900.0)
+    }
+
+    Public Sub New(Optional sampleRate As Double = 44100.0)
+        Me.sampleRate = sampleRate
+    End Sub
+    Public Overrides Function ToString() As String
+        Return $"Type: {filterType}, Reso: {resonance}, Cutoff: {cutoffVal}"
+    End Function
+    Public Sub SetCutoff(rawCutoff As Integer)
+        rawCutoff = Math.Max(0, Math.Min(2047, rawCutoff))
+        cutoffVal = rawCutoff
+    End Sub
+
+    Public Sub SetResonance(reso As Integer)
+        reso = Math.Max(0, Math.Min(15, reso))
+        resonance = reso / 15.0 ' Normalize
+    End Sub
+
+    Public Sub SetFilterType(ftype As EFilterType)
+        filterType = ftype
+    End Sub
+
+    Private Function InterpolatedCutoff() As Double
+        ' clamp just in case
+        cutoffVal = Math.Clamp(cutoffVal, 0, 2047)
+        ' interpolation of cutoffVal to actual freq
+        For i As Integer = 0 To cutoffCurve.Count - 2
+            Dim x0 = cutoffCurve(i).Item1
+            Dim y0 = cutoffCurve(i).Item2
+            Dim x1 = cutoffCurve(i + 1).Item1
+            Dim y1 = cutoffCurve(i + 1).Item2
+
+            If cutoffVal >= x0 AndAlso cutoffVal <= x1 Then
+                Dim t = (cutoffVal - x0) / (x1 - x0)
+                Return (y0 + t * (y1 - y0)) + CutoffBias
+            End If
+        Next
+        ' out of bounds management
+        Return cutoffCurve.Last().Item2 + CutoffBias
+    End Function
+
+
+    Public Function ApplyFilter(input As Double) As Double
+        Dim f As Double = (CutoffMultiplier * Math.Sin(Math.PI * InterpolatedCutoff() / sampleRate))
+        Dim adjustedResonance As Double = resonance ' * ((2047 - cutoffVal) / 2047) fuck this
+        Dim q As Double = 1.0 - (adjustedResonance / ResonanceDivider)
+        highpass = input - lowpass - q * bandpass
+        highpass *= 0.67 ' filter distortion what
+        highpass = Math.Max(-1.0, Math.Min(1.0, highpass)) ' clamp
+        bandpass += f * highpass
+        lowpass += f * bandpass
+        Dim output As Double = 0.0
+        If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
+        If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
+        If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
+        'Return Math.Max(-1.0, Math.Min(1.0, output)) ' anti clipping
+        ' actually clip however much you want this isnt a 6581
+        Return output
+    End Function
+
+
+    Public Sub Reset()
+        bandpass = 0
+        lowpass = 0
+        highpass = 0
+    End Sub
 End Class

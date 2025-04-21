@@ -36,7 +36,18 @@ Partial Class Form1
         CheckBox3 = New CheckBox()
         CheckBox4 = New CheckBox()
         CheckBox5 = New CheckBox()
+        GroupBox1 = New GroupBox()
+        Label5 = New Label()
+        NumericUpDown4 = New NumericUpDown()
+        Label4 = New Label()
+        NumericUpDown3 = New NumericUpDown()
+        Label3 = New Label()
+        NumericUpDown2 = New NumericUpDown()
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
+        GroupBox1.SuspendLayout()
+        CType(NumericUpDown4, ComponentModel.ISupportInitialize).BeginInit()
+        CType(NumericUpDown3, ComponentModel.ISupportInitialize).BeginInit()
+        CType(NumericUpDown2, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' Button1
@@ -109,7 +120,7 @@ Partial Class Form1
         ' 
         ' Button3
         ' 
-        Button3.Location = New Point(317, 122)
+        Button3.Location = New Point(125, 95)
         Button3.Name = "Button3"
         Button3.Size = New Size(129, 29)
         Button3.TabIndex = 6
@@ -149,18 +160,92 @@ Partial Class Form1
         ' CheckBox5
         ' 
         CheckBox5.AutoSize = True
-        CheckBox5.Location = New Point(125, 100)
+        CheckBox5.Location = New Point(314, 102)
         CheckBox5.Name = "CheckBox5"
         CheckBox5.Size = New Size(124, 24)
         CheckBox5.TabIndex = 11
         CheckBox5.Text = "Double speed"
         CheckBox5.UseVisualStyleBackColor = True
         ' 
+        ' GroupBox1
+        ' 
+        GroupBox1.Controls.Add(Label5)
+        GroupBox1.Controls.Add(NumericUpDown4)
+        GroupBox1.Controls.Add(Label4)
+        GroupBox1.Controls.Add(NumericUpDown3)
+        GroupBox1.Controls.Add(Label3)
+        GroupBox1.Controls.Add(NumericUpDown2)
+        GroupBox1.Location = New Point(14, 130)
+        GroupBox1.Name = "GroupBox1"
+        GroupBox1.Size = New Size(272, 155)
+        GroupBox1.TabIndex = 12
+        GroupBox1.TabStop = False
+        GroupBox1.Text = "Filter controls"
+        ' 
+        ' Label5
+        ' 
+        Label5.AutoSize = True
+        Label5.Location = New Point(6, 94)
+        Label5.Name = "Label5"
+        Label5.Size = New Size(130, 20)
+        Label5.TabIndex = 5
+        Label5.Text = "Resonance divider"
+        ' 
+        ' NumericUpDown4
+        ' 
+        NumericUpDown4.DecimalPlaces = 2
+        NumericUpDown4.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
+        NumericUpDown4.Location = New Point(155, 92)
+        NumericUpDown4.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
+        NumericUpDown4.Name = "NumericUpDown4"
+        NumericUpDown4.Size = New Size(85, 27)
+        NumericUpDown4.TabIndex = 4
+        NumericUpDown4.Value = New Decimal(New Integer() {3, 0, 0, 0})
+        ' 
+        ' Label4
+        ' 
+        Label4.AutoSize = True
+        Label4.Location = New Point(6, 61)
+        Label4.Name = "Label4"
+        Label4.Size = New Size(81, 20)
+        Label4.TabIndex = 3
+        Label4.Text = "Cutoff bias"
+        ' 
+        ' NumericUpDown3
+        ' 
+        NumericUpDown3.Increment = New Decimal(New Integer() {50, 0, 0, 0})
+        NumericUpDown3.Location = New Point(155, 59)
+        NumericUpDown3.Maximum = New Decimal(New Integer() {20154, 0, 0, 0})
+        NumericUpDown3.Name = "NumericUpDown3"
+        NumericUpDown3.Size = New Size(85, 27)
+        NumericUpDown3.TabIndex = 2
+        ' 
+        ' Label3
+        ' 
+        Label3.AutoSize = True
+        Label3.Location = New Point(6, 28)
+        Label3.Name = "Label3"
+        Label3.Size = New Size(118, 20)
+        Label3.TabIndex = 1
+        Label3.Text = "Cutoff multiplier"
+        ' 
+        ' NumericUpDown2
+        ' 
+        NumericUpDown2.DecimalPlaces = 2
+        NumericUpDown2.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
+        NumericUpDown2.Location = New Point(155, 26)
+        NumericUpDown2.Maximum = New Decimal(New Integer() {2, 0, 0, 0})
+        NumericUpDown2.Name = "NumericUpDown2"
+        NumericUpDown2.Size = New Size(85, 27)
+        NumericUpDown2.TabIndex = 0
+        NumericUpDown2.Value = New Decimal(New Integer() {167, 0, 0, 131072})
+        ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(458, 163)
+        ClientSize = New Size(557, 297)
+        Controls.Add(GroupBox1)
         Controls.Add(CheckBox5)
         Controls.Add(CheckBox4)
         Controls.Add(CheckBox3)
@@ -178,6 +263,11 @@ Partial Class Form1
         Name = "Form1"
         Text = "ShitSID"
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).EndInit()
+        GroupBox1.ResumeLayout(False)
+        GroupBox1.PerformLayout()
+        CType(NumericUpDown4, ComponentModel.ISupportInitialize).EndInit()
+        CType(NumericUpDown3, ComponentModel.ISupportInitialize).EndInit()
+        CType(NumericUpDown2, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -196,5 +286,12 @@ Partial Class Form1
     Friend WithEvents CheckBox3 As CheckBox
     Friend WithEvents CheckBox4 As CheckBox
     Friend WithEvents CheckBox5 As CheckBox
+    Friend WithEvents GroupBox1 As GroupBox
+    Friend WithEvents NumericUpDown2 As NumericUpDown
+    Friend WithEvents Label3 As Label
+    Friend WithEvents Label5 As Label
+    Friend WithEvents NumericUpDown4 As NumericUpDown
+    Friend WithEvents Label4 As Label
+    Friend WithEvents NumericUpDown3 As NumericUpDown
 
 End Class

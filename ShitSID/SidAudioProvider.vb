@@ -8,7 +8,7 @@ Public Class SidAudioProvider
     Private ReadOnly vWaveFormat As WaveFormat
     Private sidPhase As Double = 0
     Private Const SID_CLOCK_RATE As Double = 985248.0 ' PAL clock in Hz
-
+    Public DoubleSpeed As Boolean = False
     Public Sub New(sidEmu As ShitSID, Optional sampleRateHz As Integer = 44100)
         sid = sidEmu
         sampleRate = sampleRateHz
@@ -22,6 +22,7 @@ Public Class SidAudioProvider
 
             While sidPhase >= 1
                 sid.Clock()
+                If DoubleSpeed Then sid.Clock()
                 sidPhase -= 1
             End While
 

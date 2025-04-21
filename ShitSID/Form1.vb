@@ -55,6 +55,7 @@ Public Class Form1
                 If state.LastInstructionExecResult.OpCodeByte = &H60 Then
                     Exit While
                 End If
+
             End While
             For i = 54272 To 54303
                 sid.WriteRegister(i, mem(i))
@@ -117,8 +118,22 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     Private Sub CheckBox5_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox5.CheckedChanged
         If CheckBox5.Checked Then
             delayMS = 10
+            provider.DoubleSpeed = True
         Else
             delayMS = 20
+            provider.DoubleSpeed = False
         End If
+    End Sub
+
+    Private Sub NumericUpDown2_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged
+        sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+    End Sub
+
+    Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown3.ValueChanged
+        sid.Filter.CutoffBias = NumericUpDown3.Value
+    End Sub
+
+    Private Sub NumericUpDown4_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown4.ValueChanged
+        sid.Filter.ResonanceDivider = NumericUpDown4.Value
     End Sub
 End Class
