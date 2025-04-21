@@ -1,4 +1,4 @@
-﻿Public Class FakeSID
+﻿Public Class ShitSID
     Public Voices(2) As Voice
     Public currentTime As Double = 0
     Public Sub New()
@@ -6,7 +6,6 @@
             Voices(i) = New Voice()
         Next
     End Sub
-
     Public Sub Clock()
         currentTime += 1.0 / 985248.0
     End Sub
@@ -47,8 +46,13 @@
                     voice.NoteOff(currentTime)
                 End If
                 voice.lastGateVal = bits(0)
-
-                If bits(4) Then
+                If bits(4) AndAlso bits(5) Then
+                    voice.Waveform = "tri+saw"
+                ElseIf bits(4) AndAlso bits(6) Then
+                    voice.Waveform = "tri+pulse"
+                ElseIf bits(5) AndAlso bits(6) Then
+                    voice.Waveform = "saw+pulse"
+                ElseIf bits(4) Then
                     voice.Waveform = "tri"
                 ElseIf bits(5) Then
                     voice.Waveform = "saw"
@@ -69,6 +73,8 @@
     End Sub
 End Class
 Public Class Voice
+    Private phase As Double = 0.0
+    Private lastTime As Double = 0.0
     Public LoFiDuty As Boolean = False
     Public lastGateVal = False
     Public Frequency As Double = 440.0
@@ -109,14 +115,21 @@ Public Class Voice
     End Sub
 
     Public Function Generate(time As Double) As Double
+        Dim deltaTime As Double = time - lastTime
+        lastTime = time
+
+        ' phase accumulator
+        phase += Frequency * deltaTime
+        phase = phase Mod 1.0 '
+
         Dim envLevel = Envelope.GetLevel(time)
         If envLevel <= 0 AndAlso Envelope.IsIdle() Then
             Return 0
         End If
-
-        Dim phase As Double = (Frequency * time) Mod 1
         Dim wave As Double
-
+        If (Control And &H8) <> 0 Then
+            Return envLevel ' no pops please
+        End If
         Select Case Waveform
             Case "saw"
                 wave = 2 * phase - 1
@@ -132,10 +145,15 @@ Public Class Voice
                     currentNoise = rand.NextDouble() * 2 - 1
                 End If
                 wave = currentNoise
+            Case "tri+saw"
+                wave = (1.0 - 4 * Math.Abs(phase - 0.5)) Xor (2 * phase - 1)
+            Case "tri+pulse"
+                wave = (1.0 - 4 * Math.Abs(phase - 0.5)) * If(phase < DutyCycle, 1, -1)
+            Case "saw+pulse"
+                wave = (2 * phase - 1) * If(phase < DutyCycle, 1, -1)
             Case Else
                 wave = 0
         End Select
-
         Return wave * envLevel
     End Function
 End Class

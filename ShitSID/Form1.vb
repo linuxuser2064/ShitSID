@@ -1,9 +1,9 @@
 ﻿Imports NAudio.Wave
 Imports Highbyte.DotNet6502
-Imports System.Threading
 Imports System.IO
+Imports NAudio.CoreAudioApi
 Public Class Form1
-    Public sid As New FakeSID()
+    Public sid As New ShitSID()
     Dim cpu As New CPU
     Dim mem As New Memory(65536)
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
@@ -20,7 +20,7 @@ Public Class Form1
         End If
         cpu.PC = sidfile.InitAddress
         provider = New SidAudioProvider(sid)
-        Dim WaveOut As New WasapiOut
+        Dim WaveOut As New WasapiOut(AudioClientShareMode.Shared, True, 8)
 
         WaveOut.Init(provider)
         WaveOut.Play()
@@ -77,7 +77,7 @@ Public Class Form1
 
     Private Sub OpenFileDialog2_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog2.FileOk
         Dim out = ""
-        Dim newSidfile = ShitSID.SidFile.Load(OpenFileDialog2.FileName)
+        Dim newSidfile = SidFile.Load(OpenFileDialog2.FileName)
         MsgBox($"{Path.GetFileName(OpenFileDialog2.FileName)} info:
 Song name: {newSidfile.SongName} by {newSidfile.SongArtist}
 Released by: {newSidfile.SongStudio}
