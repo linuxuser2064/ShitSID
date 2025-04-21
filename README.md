@@ -1,12 +1,16 @@
 # ShitSID
-A crusty SID emulator written in Visual Basic.
+A crusty (?) SID emulator written in Visual Basic.
 
 # Features
 - Basic waveform emulation
 - Duty cycle support on pulse wave
+- Special 4-bit duty cycle mode for extra crustyness
 - Linear ADSR, adjusted to be SID-like
-- No ringmod, sync, or filter
+- ADSR attack always starts at 0 volume
+- No SID filter
 - "Pitchable" noise
+- Channels are mutable
+- Statistics window for debugging
 
 # Issues
 - Most MoN songs, even PSID's, don't work properly.
