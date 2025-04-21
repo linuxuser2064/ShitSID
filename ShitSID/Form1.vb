@@ -5,6 +5,7 @@ Imports NAudio.CoreAudioApi
 Public Class Form1
     Public sid As New ShitSID()
     Dim cpu As New CPU
+    Dim delayMS = 20
     Dim mem As New Memory(65536)
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         OpenFileDialog1.ShowDialog()
@@ -58,7 +59,7 @@ Public Class Form1
             For i = 54272 To 54303
                 sid.WriteRegister(i, mem(i))
             Next
-            While watch.ElapsedMilliseconds < 20
+            While watch.ElapsedMilliseconds < delayMS
                 Threading.Thread.Sleep(TimeSpan.Zero)
             End While
             watch.Stop()
@@ -110,6 +111,14 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             provider.sid.Voices(2).MuteVoice = True
         Else
             provider.sid.Voices(2).MuteVoice = False
+        End If
+    End Sub
+
+    Private Sub CheckBox5_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox5.CheckedChanged
+        If CheckBox5.Checked Then
+            delayMS = 10
+        Else
+            delayMS = 20
         End If
     End Sub
 End Class

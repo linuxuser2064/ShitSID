@@ -124,20 +124,15 @@ Public Class Voice
     Public Function Generate(time As Double) As Double
         Dim deltaTime As Double = time - lastTime
         lastTime = time
-
         Dim wave As Double
-
         If (Control And &H8) <> 0 Then ' test bit
             Return Envelope.GetLevel(time)
         End If
         If MuteVoice Then Return 0
-
         ' source voices
         Dim sourceIndex As Integer = (Me.Index + 2) Mod 3 ' mod because the order
         Dim sourceVoice = Me.Parent.Voices(sourceIndex)
-
         Dim oldSourcePhase As Double = sourceVoice.phase
-
         ' phase accumulator
         phase += Frequency * deltaTime
         phase = phase Mod 1.0
@@ -196,19 +191,27 @@ Public Class ADSR
     Private state As String = "idle"
     Private level As Double = 0
     Private startTime As Double = 0
-
+    Private decayStartLevel As Double
     Private Function RateToTime(rate As Integer, stage As String) As Double
         ' SID ADSR map
         Dim attackTimes() As Double = {0.002, 0.008, 0.016, 0.024, 0.038, 0.056, 0.068, 0.08, 0.1, 0.25, 0.5, 0.8, 1.0, 3.0, 5.0, 8.0}
         Dim decayReleaseTimes() As Double = {0.006, 0.024, 0.048, 0.072, 0.114, 0.168, 0.204, 0.24, 0.3, 0.75, 1.5, 2.4, 3.0, 9.0, 15.0, 24.0}
 
+        rate = Math.Max(0, Math.Min(rate, 15))
+
         Select Case stage
             Case "attack"
-                Return attackTimes(Math.Max(0, Math.Min(rate, 15)))
-            Case "decay", "release"
-                Return decayReleaseTimes(Math.Max(0, Math.Min(rate, 15))) / 4
+                Return attackTimes(rate)
+            Case "decay"
+                Dim dur = decayReleaseTimes(rate) / 1.5 ' why 1.5idkfkskkskfsksksksks
+                Dim ε = 0.99 ' εεεεεεεεεε
+                Return -Math.Log(1 - ε) / dur
+            Case "release"
+                Dim dur = decayReleaseTimes(rate) / 1.5 ' why 1.5idkfkskkskfsksksksks
+                Dim ε = 0.99 ' εεεεεεεεεε
+                Return -Math.Log(1 - ε) / dur
             Case Else
-                Return 0.1 ' no change
+                Return 0.1
         End Select
     End Function
     Public Function IsIdle() As Boolean
@@ -238,22 +241,25 @@ Public Class ADSR
                 End If
 
             Case "decay"
-                Dim dur = RateToTime(Decay, "decay")
-                Dim delta = 1.0 - (Sustain / 15.0)
-                level = 1.0 - delta * Math.Min(1.0, t / dur)
-                If t >= dur Then
+                Dim k = RateToTime(Decay, "decay")
+                Dim target = Sustain / 15.0
+                level = target + (1.0 - target) * Math.Exp(-k * t)
+                If level <= target + 0.001 Then ' close enough
+                    level = target
                     state = "sustain"
                     startTime = currentTime
                 End If
+
 
             Case "sustain"
                 level = Sustain / 15.0 ' this took ages to get working
 
             Case "release"
-                Dim dur = RateToTime(Release, "release")
-                level = releaseStartLevel * (1.0 - Math.Min(1.0, t / dur))
-                If level <= 0.001 Then
-                    level = 0
+                Dim k = RateToTime(Release, "release")
+                Dim target = 0
+                level = releaseStartLevel * (target + (1.0 - target) * Math.Exp(-k * t))
+                If level <= target + 0.001 Then ' close enough
+                    level = target
                     state = "idle"
                 End If
 

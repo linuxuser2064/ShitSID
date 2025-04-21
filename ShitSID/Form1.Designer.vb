@@ -35,6 +35,7 @@ Partial Class Form1
         CheckBox2 = New CheckBox()
         CheckBox3 = New CheckBox()
         CheckBox4 = New CheckBox()
+        CheckBox5 = New CheckBox()
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -145,11 +146,22 @@ Partial Class Form1
         CheckBox4.Text = "Mute channel 3"
         CheckBox4.UseVisualStyleBackColor = True
         ' 
+        ' CheckBox5
+        ' 
+        CheckBox5.AutoSize = True
+        CheckBox5.Location = New Point(125, 100)
+        CheckBox5.Name = "CheckBox5"
+        CheckBox5.Size = New Size(124, 24)
+        CheckBox5.TabIndex = 11
+        CheckBox5.Text = "Double speed"
+        CheckBox5.UseVisualStyleBackColor = True
+        ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(458, 163)
+        Controls.Add(CheckBox5)
         Controls.Add(CheckBox4)
         Controls.Add(CheckBox3)
         Controls.Add(CheckBox2)
@@ -183,5 +195,6 @@ Partial Class Form1
     Friend WithEvents CheckBox2 As CheckBox
     Friend WithEvents CheckBox3 As CheckBox
     Friend WithEvents CheckBox4 As CheckBox
+    Friend WithEvents CheckBox5 As CheckBox
 
 End Class
