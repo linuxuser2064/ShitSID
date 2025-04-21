@@ -5,7 +5,7 @@ A crusty SID emulator written in Visual Basic.
 - Basic waveform emulation
 - Duty cycle support on pulse wave
 - Linear ADSR, adjusted to be SID-like
-- No ringmod, sync, test bit support, filter, or mixed waveforms
+- No ringmod, sync, or filter
 - "Pitchable" noise
 
 # Issues
