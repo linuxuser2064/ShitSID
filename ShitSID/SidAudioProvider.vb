@@ -30,7 +30,6 @@ Public Class SidAudioProvider
 
         Return count
     End Function
-
     Public ReadOnly Property WaveFormat As WaveFormat Implements ISampleProvider.WaveFormat
         Get
             Return vWaveFormat

@@ -32,6 +32,9 @@ Partial Class Form1
         Button2 = New Button()
         OpenFileDialog2 = New OpenFileDialog()
         Button3 = New Button()
+        CheckBox2 = New CheckBox()
+        CheckBox3 = New CheckBox()
+        CheckBox4 = New CheckBox()
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -105,18 +108,51 @@ Partial Class Form1
         ' 
         ' Button3
         ' 
-        Button3.Location = New Point(228, 166)
+        Button3.Location = New Point(317, 122)
         Button3.Name = "Button3"
         Button3.Size = New Size(129, 29)
         Button3.TabIndex = 6
         Button3.Text = "Open statistics"
         Button3.UseVisualStyleBackColor = True
         ' 
+        ' CheckBox2
+        ' 
+        CheckBox2.AutoSize = True
+        CheckBox2.Location = New Point(314, 12)
+        CheckBox2.Name = "CheckBox2"
+        CheckBox2.Size = New Size(132, 24)
+        CheckBox2.TabIndex = 8
+        CheckBox2.Text = "Mute channel 1"
+        CheckBox2.UseVisualStyleBackColor = True
+        ' 
+        ' CheckBox3
+        ' 
+        CheckBox3.AutoSize = True
+        CheckBox3.Location = New Point(314, 42)
+        CheckBox3.Name = "CheckBox3"
+        CheckBox3.Size = New Size(132, 24)
+        CheckBox3.TabIndex = 9
+        CheckBox3.Text = "Mute channel 2"
+        CheckBox3.UseVisualStyleBackColor = True
+        ' 
+        ' CheckBox4
+        ' 
+        CheckBox4.AutoSize = True
+        CheckBox4.Location = New Point(314, 72)
+        CheckBox4.Name = "CheckBox4"
+        CheckBox4.Size = New Size(132, 24)
+        CheckBox4.TabIndex = 10
+        CheckBox4.Text = "Mute channel 3"
+        CheckBox4.UseVisualStyleBackColor = True
+        ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(8F, 20F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(369, 207)
+        ClientSize = New Size(458, 163)
+        Controls.Add(CheckBox4)
+        Controls.Add(CheckBox3)
+        Controls.Add(CheckBox2)
         Controls.Add(Button3)
         Controls.Add(Button2)
         Controls.Add(NumericUpDown1)
@@ -144,5 +180,8 @@ Partial Class Form1
     Friend WithEvents Button2 As Button
     Friend WithEvents OpenFileDialog2 As OpenFileDialog
     Friend WithEvents Button3 As Button
+    Friend WithEvents CheckBox2 As CheckBox
+    Friend WithEvents CheckBox3 As CheckBox
+    Friend WithEvents CheckBox4 As CheckBox
 
 End Class

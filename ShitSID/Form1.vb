@@ -12,6 +12,10 @@ Public Class Form1
     Dim sidfile As SidFile
     Dim provider As SidAudioProvider
     Private Sub OpenFileDialog1_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog1.FileOk
+        If sidfile IsNot Nothing Then
+            ' this means we're already playing
+            Application.Restart()
+        End If
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
         If NumericUpDown1.Value > 0 Then
             cpu.A = NumericUpDown1.Value - 1
@@ -21,7 +25,6 @@ Public Class Form1
         cpu.PC = sidfile.InitAddress
         provider = New SidAudioProvider(sid)
         Dim WaveOut As New WasapiOut(AudioClientShareMode.Shared, True, 8)
-
         WaveOut.Init(provider)
         WaveOut.Play()
 
@@ -31,6 +34,10 @@ Public Class Form1
         While True
             Dim state = cpu.ExecuteOneInstruction(mem)
             If state.LastInstructionExecResult.OpCodeByte = &H60 Then
+                Exit While
+            End If
+            If state.LastInstructionExecResult.OpCodeByte = &H0 Then
+                MsgBox("BRK encountered")
                 Exit While
             End If
         End While
@@ -86,5 +93,23 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
         StatsViewer.Show()
+    End Sub
+
+    Private Sub CheckBox2_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox2.CheckedChanged, CheckBox4.CheckedChanged, CheckBox3.CheckedChanged
+        If CheckBox2.Checked Then
+            provider.sid.Voices(0).MuteVoice = True
+        Else
+            provider.sid.Voices(0).MuteVoice = False
+        End If
+        If CheckBox3.Checked Then
+            provider.sid.Voices(1).MuteVoice = True
+        Else
+            provider.sid.Voices(1).MuteVoice = False
+        End If
+        If CheckBox4.Checked Then
+            provider.sid.Voices(2).MuteVoice = True
+        Else
+            provider.sid.Voices(2).MuteVoice = False
+        End If
     End Sub
 End Class

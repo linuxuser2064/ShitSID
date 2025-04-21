@@ -3,7 +3,7 @@
     Public currentTime As Double = 0
     Public Sub New()
         For i As Integer = 0 To 2
-            Voices(i) = New Voice()
+            Voices(i) = New Voice(Me, i)
         Next
     End Sub
     Public Sub Clock()
@@ -73,8 +73,12 @@
     End Sub
 End Class
 Public Class Voice
+    Private Index As Int32
+    Private Parent As ShitSID
+    Public MuteVoice As Boolean = False
     Private phase As Double = 0.0
     Private lastTime As Double = 0.0
+    Private prevMasterMSB As Boolean = False
     Public LoFiDuty As Boolean = False
     Public lastGateVal = False
     Public Frequency As Double = 440.0
@@ -88,6 +92,10 @@ Public Class Voice
     Public PulseWidthHi As Byte = 0
     Private lastNoiseUpdate As Double = 0
     Private currentNoise As Double = 0
+    Public Sub New(parent As ShitSID, i As Int32)
+        Me.Parent = parent
+        Me.Index = i
+    End Sub
     Public Sub UpdateDutyCycle()
         If LoFiDuty Then
             ' 4 bit
@@ -113,23 +121,37 @@ Public Class Voice
     Public Sub NoteOff(currentTime As Double)
         Envelope.NoteOff(currentTime)
     End Sub
-
     Public Function Generate(time As Double) As Double
         Dim deltaTime As Double = time - lastTime
         lastTime = time
 
+        Dim wave As Double
+
+        If (Control And &H8) <> 0 Then ' test bit
+            Return Envelope.GetLevel(time)
+        End If
+        If MuteVoice Then Return 0
+
+        ' source voices
+        Dim sourceIndex As Integer = (Me.Index + 2) Mod 3 ' mod because the order
+        Dim sourceVoice = Me.Parent.Voices(sourceIndex)
+
+        Dim oldSourcePhase As Double = sourceVoice.phase
+
         ' phase accumulator
         phase += Frequency * deltaTime
-        phase = phase Mod 1.0 '
-
+        phase = phase Mod 1.0
+        ' osc sync
+        Dim masterVoice As Voice = Me.Parent.Voices(sourceIndex) 'aaaaaas
+        Dim masterPhaseMSB As Boolean = (masterVoice.phase >= 0.5)
+        If (Control And &H2) <> 0 Then
+            If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
+                Me.phase = 0.0 ' phase reset
+            End If
+        End If
+        prevMasterMSB = masterPhaseMSB
         Dim envLevel = Envelope.GetLevel(time)
-        If envLevel <= 0 AndAlso Envelope.IsIdle() Then
-            Return 0
-        End If
-        Dim wave As Double
-        If (Control And &H8) <> 0 Then
-            Return envLevel ' no pops please
-        End If
+        If envLevel <= 0 AndAlso Envelope.IsIdle() Then Return 0
         Select Case Waveform
             Case "saw"
                 wave = 2 * phase - 1
@@ -138,7 +160,8 @@ Public Class Voice
             Case "square"
                 wave = If(phase < DutyCycle, 1, -1)
             Case "noise"
-                Dim interval = 0.075 / Frequency ' approx
+                Dim cycleDuration As Double = 1.0 / Frequency
+                Dim interval As Double = cycleDuration / 16.0
                 If time - lastNoiseUpdate >= interval Then
                     lastNoiseUpdate = time
                     Static rand As New Random()
@@ -154,6 +177,13 @@ Public Class Voice
             Case Else
                 wave = 0
         End Select
+
+        ' xor ringmod
+        If (Control And &H4) <> 0 Then
+            Dim modulator As Double = 1.0 - 4 * Math.Abs(sourceVoice.phase - 0.5)
+            wave *= If(modulator > 0, 1, -1)
+        End If
+
         Return wave * envLevel
     End Function
 End Class
