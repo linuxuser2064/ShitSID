@@ -3,6 +3,7 @@ Imports Highbyte.DotNet6502
 Imports System.IO
 Imports NAudio.CoreAudioApi
 Public Class Form1
+    ' THIS IS EXPORT VERSION DO NOT USE FoR PLAYBACK
     Public sid As New ShitSID()
     Dim cpu As New CPU
     Dim delayMS = 20
