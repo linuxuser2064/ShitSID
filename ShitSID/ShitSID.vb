@@ -20,8 +20,8 @@
         For Each v In Voices
             output += v.Generate(currentTime)
         Next
-        'Return Math.Max(-1, Math.Min(1, output))
-        Return output
+        Return Math.Max(-1, Math.Min(1, output / 3))
+        'Return output / 3
     End Function
     Public Sub WriteRegister(addr As Integer, value As Byte)
         ' das filter
