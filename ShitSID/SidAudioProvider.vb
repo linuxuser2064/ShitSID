@@ -1,4 +1,5 @@
-﻿Imports NAudio.Wave
+﻿Imports Highbyte.DotNet6502
+Imports NAudio.Wave
 
 Public Class SidAudioProvider
     Implements ISampleProvider
@@ -19,7 +20,6 @@ Public Class SidAudioProvider
         For i = 0 To count - 1
             ' clock the sid
             sidPhase += SID_CLOCK_RATE / sampleRate
-
             While sidPhase >= 1
                 sid.Clock()
                 If DoubleSpeed Then sid.Clock()

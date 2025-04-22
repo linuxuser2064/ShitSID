@@ -42,6 +42,11 @@ Public Class Form1
                 Exit While
             End If
         End While
+        For i = 54272 To 54303
+            mem.MapWriter(i, Sub(addr As UShort, value As Byte)
+                                 sid.WriteRegister(addr, value)
+                             End Sub)
+        Next
         BackgroundWorker1.RunWorkerAsync()
     End Sub
 
@@ -49,22 +54,32 @@ Public Class Form1
         Dim watch As New Stopwatch
         While True
             watch.Start()
+            For Each v In sid.Voices
+                If v.pendingNoteOn Then
+                    v.NoteOn(sid.currentTime)
+                    v.pendingNoteOn = False
+                ElseIf v.pendingNoteOff Then
+                    v.NoteOff(sid.currentTime)
+                    v.pendingNoteOff = False
+                End If
+            Next
             cpu.PC = sidfile.PlayAddress
             While True
                 Dim state = cpu.ExecuteOneInstruction(mem)
                 If state.LastInstructionExecResult.OpCodeByte = &H60 Then
                     Exit While
                 End If
-
             End While
-            For i = 54272 To 54303
-                sid.WriteRegister(i, mem(i))
-            Next
+            'For i = 54272 To 54303
+            '    sid.WriteRegister(i, mem(i))
+            'Next
+
             While watch.ElapsedMilliseconds < delayMS
                 Threading.Thread.Sleep(TimeSpan.Zero)
             End While
             watch.Stop()
             watch.Reset()
+
         End While
     End Sub
 

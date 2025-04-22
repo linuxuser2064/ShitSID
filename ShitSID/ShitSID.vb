@@ -75,6 +75,7 @@
         Select Case subReg
             Case 0 ' FREQ LO
                 voice.FreqLo = value
+                voice.UpdateFrequency()
             Case 1 ' FREQ HI
                 voice.FreqHi = value
                 voice.UpdateFrequency()
@@ -87,10 +88,15 @@
             Case 4 ' CONTROL REG
                 voice.Control = value
                 Dim bits As New BitArray({value})
+                'If bits(0) = True AndAlso voice.lastGateVal = False Then
+                '    voice.NoteOn(currentTime)
+                'ElseIf bits(0) = False AndAlso voice.lastGateVal = True Then
+                '    voice.NoteOff(currentTime)
+                'End If
                 If bits(0) = True AndAlso voice.lastGateVal = False Then
-                    voice.NoteOn(currentTime)
+                    voice.pendingNoteOn = True
                 ElseIf bits(0) = False AndAlso voice.lastGateVal = True Then
-                    voice.NoteOff(currentTime)
+                    voice.pendingNoteOff = True
                 End If
                 voice.lastGateVal = bits(0)
                 If bits(4) AndAlso bits(5) Then
@@ -135,6 +141,8 @@
     End Sub
 End Class
 Public Class Voice
+    Public pendingNoteOn As Boolean = False
+    Public pendingNoteOff As Boolean = False
     Private Index As Int32
     Private Parent As ShitSID
     Public MuteVoice As Boolean = False
