@@ -20,7 +20,8 @@
         For Each v In Voices
             output += v.Generate(currentTime)
         Next
-        Return Math.Max(-1, Math.Min(1, output / 3))
+        'Return Math.Max(-1, Math.Min(1, output))
+        Return output
     End Function
     Public Sub WriteRegister(addr As Integer, value As Byte)
         ' das filter
@@ -273,7 +274,7 @@ Public Class ADSR
     Private Function RateToTime(rate As Integer, stage As String) As Double
         ' SID ADSR map
         Dim attackTimes() As Double = {0.002, 0.008, 0.016, 0.024, 0.038, 0.056, 0.068, 0.08, 0.1, 0.25, 0.5, 0.8, 1.0, 3.0, 5.0, 8.0}
-        Dim decayReleaseTimes() As Double = {0.006, 0.024, 0.048, 0.072, 0.114, 0.168, 0.204, 0.24, 0.3, 0.75, 1.5, 2.4, 3.0, 9.0, 15.0, 24.0}
+        Dim decayReleaseTimes() As Double = {0.0064, 0.024, 0.048, 0.072, 0.114, 0.168, 0.204, 0.24, 0.3, 0.75, 1.5, 2.4, 3.0, 9.0, 15.0, 24.0}
 
         rate = Math.Max(0, Math.Min(rate, 15))
 
@@ -281,11 +282,11 @@ Public Class ADSR
             Case "attack"
                 Return attackTimes(rate)
             Case "decay"
-                Dim dur = decayReleaseTimes(rate) / 1.5 ' why 1.5idkfkskkskfsksksksks
+                Dim dur = decayReleaseTimes(rate) * 0.98 ' 0.98 because PAL speed
                 Dim ε = 0.99 ' εεεεεεεεεε
                 Return -Math.Log(1 - ε) / dur
             Case "release"
-                Dim dur = decayReleaseTimes(rate) / 1.5 ' why 1.5idkfkskkskfsksksksks
+                Dim dur = decayReleaseTimes(rate) * 0.985 ' 0.98 because PAL speed
                 Dim ε = 0.99 ' εεεεεεεεεε
                 Return -Math.Log(1 - ε) / dur
             Case Else
@@ -340,7 +341,7 @@ Public Class ADSR
             Case "release"
                 Dim k = RateToTime(Release, "release")
                 Dim target = 0
-                level = releaseStartLevel * (target + (1.0 - target) * Math.Exp(-k * t))
+                level = releaseStartLevel * Math.Exp(-k * t)
                 If level <= target + 0.001 Then ' close enough
                     level = target
                     state = "idle"
@@ -361,7 +362,7 @@ Public Class SIDFilter
         BandPass = 2
         HighPass = 4
     End Enum
-
+    Public Mode6581 As Boolean = False
     Private filterType As EFilterType = EFilterType.LowPass
     Private resonance As Double = 0.0 ' 0.0 to 1.0
     Private cutoffVal As Integer = 0
@@ -398,7 +399,7 @@ Public Class SIDFilter
 
     Public Sub SetResonance(reso As Integer)
         reso = Math.Max(0, Math.Min(15, reso))
-        resonance = reso / 15.0 ' Normalize
+        resonance = reso / 15.0 ' reso needs to be 0-1 not 0-15
     End Sub
 
     Public Sub SetFilterType(ftype As EFilterType)
@@ -426,23 +427,39 @@ Public Class SIDFilter
 
 
     Public Function ApplyFilter(input As Double) As Double
-        Dim f As Double = (CutoffMultiplier * Math.Sin(Math.PI * InterpolatedCutoff() / sampleRate))
-        Dim adjustedResonance As Double = resonance ' * ((2047 - cutoffVal) / 2047) fuck this
+        Dim f As Double = CutoffMultiplier * Math.Sin(Math.PI * InterpolatedCutoff() / sampleRate)
+
+        ' resonance managment
+        Dim adjustedResonance As Double = resonance
         Dim q As Double = 1.0 - (adjustedResonance / ResonanceDivider)
-        highpass = input - lowpass - q * bandpass
-        highpass *= 0.67 ' filter distortion what
-        highpass = Math.Max(-1.0, Math.Min(1.0, highpass)) ' clamp
-        bandpass += f * highpass
-        lowpass += f * bandpass
+
+        ' distortion🔥🔥🔥🔥
+        Dim cutoffFactor As Double = 1.0 - (cutoffVal / 2047.0)
+        Dim distortedInput As Double = input + Math.Tanh(input * cutoffFactor * 8.0) * cutoffFactor * 0.3
+        If Mode6581 Then
+            input = distortedInput
+        End If
+        ' svf filter
+        Dim hp As Double = input - lowpass - q * bandpass
+        If (filterType And EFilterType.BandPass) <> 0 AndAlso Mode6581 Then
+            hp = Math.Clamp(hp, -0.7, 2) ' crust
+        End If
+        Dim bp As Double = bandpass + f * hp
+        If (filterType And EFilterType.LowPass) <> 0 AndAlso Mode6581 Then
+            bp = Math.Clamp(bp, -1, 2) ' crust v2
+        End If
+        Dim lp As Double = lowpass + f * bp
+        highpass = hp
+        bandpass = bp
+        lowpass = lp
+
+        ' output
         Dim output As Double = 0.0
         If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
         If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
         If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
-        'Return Math.Max(-1.0, Math.Min(1.0, output)) ' anti clipping
-        ' actually clip however much you want this isnt a 6581
         Return output
     End Function
-
 
     Public Sub Reset()
         bandpass = 0

@@ -37,6 +37,7 @@ Partial Class Form1
         CheckBox4 = New CheckBox()
         CheckBox5 = New CheckBox()
         GroupBox1 = New GroupBox()
+        CheckBox6 = New CheckBox()
         Label5 = New Label()
         NumericUpDown4 = New NumericUpDown()
         Label4 = New Label()
@@ -67,6 +68,7 @@ Partial Class Form1
         ' 
         ' BackgroundWorker1
         ' 
+        BackgroundWorker1.WorkerSupportsCancellation = True
         ' 
         ' CheckBox1
         ' 
@@ -169,6 +171,7 @@ Partial Class Form1
         ' 
         ' GroupBox1
         ' 
+        GroupBox1.Controls.Add(CheckBox6)
         GroupBox1.Controls.Add(Label5)
         GroupBox1.Controls.Add(NumericUpDown4)
         GroupBox1.Controls.Add(Label4)
@@ -182,10 +185,20 @@ Partial Class Form1
         GroupBox1.TabStop = False
         GroupBox1.Text = "Filter controls"
         ' 
+        ' CheckBox6
+        ' 
+        CheckBox6.AutoSize = True
+        CheckBox6.Location = New Point(6, 125)
+        CheckBox6.Name = "CheckBox6"
+        CheckBox6.Size = New Size(141, 24)
+        CheckBox6.TabIndex = 6
+        CheckBox6.Text = "6581 filter mode"
+        CheckBox6.UseVisualStyleBackColor = True
+        ' 
         ' Label5
         ' 
         Label5.AutoSize = True
-        Label5.Location = New Point(6, 94)
+        Label5.Location = New Point(6, 86)
         Label5.Name = "Label5"
         Label5.Size = New Size(130, 20)
         Label5.TabIndex = 5
@@ -195,7 +208,7 @@ Partial Class Form1
         ' 
         NumericUpDown4.DecimalPlaces = 2
         NumericUpDown4.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
-        NumericUpDown4.Location = New Point(155, 92)
+        NumericUpDown4.Location = New Point(155, 84)
         NumericUpDown4.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
         NumericUpDown4.Name = "NumericUpDown4"
         NumericUpDown4.Size = New Size(85, 27)
@@ -205,7 +218,7 @@ Partial Class Form1
         ' Label4
         ' 
         Label4.AutoSize = True
-        Label4.Location = New Point(6, 61)
+        Label4.Location = New Point(6, 57)
         Label4.Name = "Label4"
         Label4.Size = New Size(81, 20)
         Label4.TabIndex = 3
@@ -214,7 +227,7 @@ Partial Class Form1
         ' NumericUpDown3
         ' 
         NumericUpDown3.Increment = New Decimal(New Integer() {50, 0, 0, 0})
-        NumericUpDown3.Location = New Point(155, 59)
+        NumericUpDown3.Location = New Point(155, 55)
         NumericUpDown3.Maximum = New Decimal(New Integer() {20154, 0, 0, 0})
         NumericUpDown3.Name = "NumericUpDown3"
         NumericUpDown3.Size = New Size(85, 27)
@@ -293,5 +306,6 @@ Partial Class Form1
     Friend WithEvents NumericUpDown4 As NumericUpDown
     Friend WithEvents Label4 As Label
     Friend WithEvents NumericUpDown3 As NumericUpDown
+    Friend WithEvents CheckBox6 As CheckBox
 
 End Class

@@ -7,31 +7,55 @@ Public Class Form1
     Dim cpu As New CPU
     Dim delayMS = 20
     Dim mem As New Memory(65536)
+    Private waveOut As WasapiOut = Nothing
+    Private provider As SidAudioProvider = Nothing
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         OpenFileDialog1.ShowDialog()
     End Sub
     Dim sidfile As SidFile
-    Dim provider As SidAudioProvider
-    Private Sub OpenFileDialog1_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog1.FileOk
-        If sidfile IsNot Nothing Then
-            ' this means we're already playing
-            Application.Restart()
+    Private Sub LoadAndPlaySID()
+        ' Stop and dispose existing audio if playing
+        If waveOut IsNot Nothing Then
+            waveOut.Stop()
+            waveOut.Dispose()
+            waveOut = Nothing
         End If
+
+        ' Cancel background worker if it's running
+        If BackgroundWorker1.IsBusy Then
+            BackgroundWorker1.CancelAsync()
+            While BackgroundWorker1.IsBusy
+                Application.DoEvents()
+            End While
+        End If
+
+        ' Reinitialize components
+        sid = New ShitSID()
+        cpu = New CPU()
+        mem = New Memory()
+
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
+
+        ' Set song number from UI or default
         If NumericUpDown1.Value > 0 Then
             cpu.A = NumericUpDown1.Value - 1
         Else
             cpu.A = sidfile.StartSong - 1
         End If
+
         cpu.PC = sidfile.InitAddress
         provider = New SidAudioProvider(sid)
-        Dim WaveOut As New WasapiOut(AudioClientShareMode.Shared, True, 8)
-        WaveOut.Init(provider)
-        WaveOut.Play()
 
+        waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 8)
+        waveOut.Init(provider)
+        waveOut.Play()
+
+        ' Load SID file data into memory
         For i = 0 To sidfile.Data.Length - 1
             mem(sidfile.LoadAddress + i) = sidfile.Data(i)
         Next
+
+        ' Run init routine
         While True
             Dim state = cpu.ExecuteOneInstruction(mem)
             If state.LastInstructionExecResult.OpCodeByte = &H60 Then
@@ -42,17 +66,59 @@ Public Class Form1
                 Exit While
             End If
         End While
-        For i = 54272 To 54303
+
+        ' Map SID writes
+        For i = &HD400 To &HD41F ' 54272 to 54303
             mem.MapWriter(i, Sub(addr As UShort, value As Byte)
                                  sid.WriteRegister(addr, value)
                              End Sub)
         Next
+
+        ' Start background audio pumping
         BackgroundWorker1.RunWorkerAsync()
+    End Sub
+    Private Sub OpenFileDialog1_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog1.FileOk
+        'If sidfile IsNot Nothing Then
+        '    ' this means we're already playing
+        '    Application.Restart()
+        'End If
+        'sidfile = SidFile.Load(OpenFileDialog1.FileName)
+        'If NumericUpDown1.Value > 0 Then
+        '    cpu.A = NumericUpDown1.Value - 1
+        'Else
+        '    cpu.A = sidfile.StartSong - 1
+        'End If
+        'cpu.PC = sidfile.InitAddress
+        'provider = New SidAudioProvider(sid)
+        'waveOut.Init(provider)
+        'waveOut.Play()
+
+        'For i = 0 To sidfile.Data.Length - 1
+        '    mem(sidfile.LoadAddress + i) = sidfile.Data(i)
+        'Next
+        'While True
+        '    Dim state = cpu.ExecuteOneInstruction(mem)
+        '    If state.LastInstructionExecResult.OpCodeByte = &H60 Then
+        '        Exit While
+        '    End If
+        '    If state.LastInstructionExecResult.OpCodeByte = &H0 Then
+        '        MsgBox("BRK encountered")
+        '        Exit While
+        '    End If
+        'End While
+        'For i = 54272 To 54303
+        '    mem.MapWriter(i, Sub(addr As UShort, value As Byte)
+        '                         sid.WriteRegister(addr, value)
+        '                     End Sub)
+        'Next
+        'BackgroundWorker1.RunWorkerAsync()
+        ' if this dies im blaming chatgp
+        LoadAndPlaySID()
     End Sub
 
     Private Sub BackgroundWorker1_DoWork(sender As Object, e As System.ComponentModel.DoWorkEventArgs) Handles BackgroundWorker1.DoWork
         Dim watch As New Stopwatch
-        While True
+        While Not e.Cancel
             watch.Start()
             For Each v In sid.Voices
                 If v.pendingNoteOn Then
@@ -75,7 +141,11 @@ Public Class Form1
             'Next
 
             While watch.ElapsedMilliseconds < delayMS
-                Threading.Thread.Sleep(TimeSpan.Zero)
+                If BackgroundWorker1.CancellationPending Then
+                    e.Cancel = True
+                    Exit Sub
+                End If
+
             End While
             watch.Stop()
             watch.Reset()
@@ -85,11 +155,11 @@ Public Class Form1
 
     Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
         If CheckBox1.Checked Then
-            For Each x As Voice In provider.sid.Voices
+            For Each x As Voice In sid.Voices
                 x.LoFiDuty = True
             Next
         Else
-            For Each x As Voice In provider.sid.Voices
+            For Each x As Voice In sid.Voices
                 x.LoFiDuty = False
             Next
         End If
@@ -114,19 +184,19 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub CheckBox2_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox2.CheckedChanged, CheckBox4.CheckedChanged, CheckBox3.CheckedChanged
         If CheckBox2.Checked Then
-            provider.sid.Voices(0).MuteVoice = True
+            sid.Voices(0).MuteVoice = True
         Else
-            provider.sid.Voices(0).MuteVoice = False
+            sid.Voices(0).MuteVoice = False
         End If
         If CheckBox3.Checked Then
-            provider.sid.Voices(1).MuteVoice = True
+            sid.Voices(1).MuteVoice = True
         Else
-            provider.sid.Voices(1).MuteVoice = False
+            sid.Voices(1).MuteVoice = False
         End If
         If CheckBox4.Checked Then
-            provider.sid.Voices(2).MuteVoice = True
+            sid.Voices(2).MuteVoice = True
         Else
-            provider.sid.Voices(2).MuteVoice = False
+            sid.Voices(2).MuteVoice = False
         End If
     End Sub
 
@@ -150,5 +220,13 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub NumericUpDown4_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown4.ValueChanged
         sid.Filter.ResonanceDivider = NumericUpDown4.Value
+    End Sub
+
+    Private Sub CheckBox6_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox6.CheckedChanged
+        If CheckBox6.Checked Then
+            sid.Filter.Mode6581 = True
+        Else
+            sid.Filter.Mode6581 = False
+        End If
     End Sub
 End Class
