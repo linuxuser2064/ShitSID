@@ -37,13 +37,6 @@ Public Class Form1
         cpu.SP = 255
         mem(1) = &H37
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
-        If sidfile.FlagBits(0) AndAlso sidfile.IsRSID = False Then
-            MsgBox("This tune uses Sidplayer MUS data apparently. It may not play.", MsgBoxStyle.Information)
-        End If
-        If sidfile.FlagBits(1) AndAlso sidfile.IsRSID Then
-            ' this happens on every single RSID
-            'Throw New InvalidDataException("Tune needs C64 BASIC")
-        End If
         If sidfile.FlagBits(2) = True AndAlso sidfile.FlagBits(3) = False Then
             delayMS = 16 ' NTSC
         End If
@@ -68,10 +61,41 @@ Public Class Form1
         Else
             cpu.A = sidfile.StartSong - 1
         End If
-
+        If CheckBox2.Checked Then
+            sid.Voices(0).MuteVoice = True
+        Else
+            sid.Voices(0).MuteVoice = False
+        End If
+        If CheckBox3.Checked Then
+            sid.Voices(1).MuteVoice = True
+        Else
+            sid.Voices(1).MuteVoice = False
+        End If
+        If CheckBox4.Checked Then
+            sid.Voices(2).MuteVoice = True
+        Else
+            sid.Voices(2).MuteVoice = False
+        End If
+        sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+        sid.Filter.CutoffBias = NumericUpDown3.Value
+        sid.Filter.ResonanceDivider = NumericUpDown4.Value
+        If CheckBox6.Checked Then
+            sid.Filter.Mode6581 = True
+            sid.Filter.CutoffMultiplier = 2
+            sid.Filter.CutoffBias = 325
+            sid.Filter.ResonanceDivider = 4
+        Else
+            sid.Filter.Mode6581 = False
+        End If
         cpu.PC = sidfile.InitAddress
         provider = New SidAudioProvider(sid)
-
+        If CheckBox5.Checked Then
+            delayMS = 10
+            provider.DoubleSpeed = True
+        Else
+            delayMS = 20
+            provider.DoubleSpeed = False
+        End If
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 8)
         ' zero out ram
         For i = 0 To &HFFFF
@@ -227,8 +251,13 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     Private Sub CheckBox6_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox6.CheckedChanged
         If CheckBox6.Checked Then
             sid.Filter.Mode6581 = True
+            sid.Filter.CutoffMultiplier = 2
+            sid.Filter.CutoffBias = 425
+            sid.Filter.ResonanceDivider = 4
+            sid.Filter.Reset()
         Else
             sid.Filter.Mode6581 = False
+            sid.Filter.Reset()
         End If
     End Sub
 End Class

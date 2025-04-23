@@ -1,5 +1,4 @@
-﻿Imports System.Drawing.Imaging
-Imports System.Timers
+﻿Imports System.Timers
 
 Public Class ShitSID
     Public Filter As New SIDFilter(44100)
@@ -25,23 +24,20 @@ Public Class ShitSID
             output += v.Generate(currentTime)
         Next
         'Return Math.Max(-1, Math.Min(1, output))
-        Return output
+        Return output / 3
     End Function
+
+
     Public Sub WriteRegister(addr As Integer, value As Byte)
-        ' das filter
+        ' Handle register writes immediately
         Select Case addr
+        ' Filter settings
             Case &HD415
                 Dim bits As New BitArray({value})
                 filterCutoffLo = 0
-                If bits(0) Then
-                    filterCutoffLo += 1
-                End If
-                If bits(1) Then
-                    filterCutoffLo += 2
-                End If
-                If bits(2) Then
-                    filterCutoffLo += 4
-                End If
+                If bits(0) Then filterCutoffLo += 1
+                If bits(1) Then filterCutoffLo += 2
+                If bits(2) Then filterCutoffLo += 4
                 UpdateFilterSettings()
                 Return
             Case &HD416
@@ -58,25 +54,18 @@ Public Class ShitSID
             Case &HD418
                 Dim bits As New BitArray({value})
                 filterMode = 0
-                If bits(4) Then
-                    filterMode += SIDFilter.EFilterType.LowPass
-                End If
-                If bits(5) Then
-                    filterMode += SIDFilter.EFilterType.BandPass
-                End If
-                If bits(6) Then
-                    filterMode += SIDFilter.EFilterType.HighPass
-                End If
+                If bits(4) Then filterMode += SIDFilter.EFilterType.LowPass
+                If bits(5) Then filterMode += SIDFilter.EFilterType.BandPass
+                If bits(6) Then filterMode += SIDFilter.EFilterType.HighPass
                 UpdateFilterSettings()
                 Return
         End Select
+
         Dim reg = addr And &H1F
         Dim voiceNum = reg \ 7
         If voiceNum > 2 Then Return
-
         Dim voice = Voices(voiceNum)
         Dim subReg = reg Mod 7
-
         Select Case subReg
             Case 0 ' FREQ LO
                 voice.FreqLo = value
@@ -93,15 +82,12 @@ Public Class ShitSID
             Case 4 ' CONTROL REG
                 voice.Control = value
                 Dim bits As New BitArray({value})
-                'If bits(0) = True AndAlso voice.lastGateVal = False Then
-                '    voice.NoteOn(currentTime)
-                'ElseIf bits(0) = False AndAlso voice.lastGateVal = True Then
-                '    voice.NoteOff(currentTime)
-                'End If
                 If bits(0) = True AndAlso voice.lastGateVal = False Then
-                    voice.pendingNoteOn = True
+                    voice.NoteOn(currentTime)
+                    voice.Envelope.GetLevel(currentTime) ' Force level evaluation now
                 ElseIf bits(0) = False AndAlso voice.lastGateVal = True Then
-                    voice.pendingNoteOff = True
+                    voice.NoteOff(currentTime)
+                    voice.Envelope.GetLevel(currentTime) ' Force level evaluation now
                 End If
                 voice.lastGateVal = bits(0)
                 If bits(4) AndAlso bits(5) Then
@@ -119,19 +105,19 @@ Public Class ShitSID
                 ElseIf bits(7) Then
                     voice.Waveform = "noise"
                 Else
-                    voice.Waveform = "none" ' no audio
+                    voice.Waveform = "none" ' No audio
                 End If
             Case 5 ' ATTACK/DECAY
                 voice.Envelope.Attack = (value >> 4) And &HF
                 voice.Envelope.Decay = value And &HF
             Case 6 ' SUSTAIN/RELEASE
-                voice.Envelope.Sustain = ((value >> 4) And &HF)
+                voice.Envelope.Sustain = (value >> 4) And &HF
                 voice.Envelope.Release = value And &HF
         End Select
     End Sub
     Private Sub UpdateFilterSettings()
         Dim msbPart As Integer = filterCutoffHi << 3
-        Dim lsbPart As Integer = filterCutoffLo And &H7 ' Mask just the lowest 3 bits
+        Dim lsbPart As Integer = filterCutoffLo And &H7 ' 11 bit is cursed
         Dim combined As UShort = CUInt(msbPart Or lsbPart)
         Dim cutoff = combined
         Filter.SetCutoff(cutoff)
@@ -148,12 +134,7 @@ End Class
 Public Class Voice
     Public pendingNoteOn As Boolean = False
     Public pendingNoteOff As Boolean = False
-    Private Index As Int32
-    Private Parent As ShitSID
     Public MuteVoice As Boolean = False
-    Private phase As Double = 0.0
-    Private lastTime As Double = 0.0
-    Private prevMasterMSB As Boolean = False
     Public LoFiDuty As Boolean = False
     Public lastGateVal = False
     Public Frequency As Double = 440.0
@@ -165,9 +146,15 @@ Public Class Voice
     Public Envelope As New ADSR()
     Public PulseWidthLo As Byte = 0
     Public PulseWidthHi As Byte = 0
+    Public UseFilter As Boolean = False
+    Private Index As Int32
+    Private Parent As ShitSID
+    Private phase As Double = 0.0
+    Private lastTime As Double = 0.0
+    Private prevMasterMSB As Boolean = False
     Private lastNoiseUpdate As Double = 0
     Private currentNoise As Double = 0
-    Public UseFilter As Boolean = False
+    Private lastGateToggleTime As Double = -1.0 '''
     Public Sub New(parent As ShitSID, i As Int32)
         Me.Parent = parent
         Me.Index = i
@@ -270,26 +257,30 @@ End Class
 
 Public Class ADSR
     Public Attack As Integer = 0 ' 0–15
-    Public Decay As Integer = 0 ' 0–15
-    Public Sustain As Double = 15 ' 0-15
-    Public Release As Integer = 0 ' 0–15
-    Public releaseStartLevel As Double = 0
+    Public Decay As Integer = 0 ' 0–15
+    Public Sustain As Double = 15 ' 0-15
+    Public Release As Integer = 0 ' 0–15
+    Public releaseStartLevel As Double = 0
     Public state As String = "idle"
     Public level As Double = 0
     Public startTime As Double = 0
     Public decayStartLevel As Double
     Public attackStartLevel As Double = 0
-    Private delayTicks As Double = 1.0 / 985248.0 ' delay one tick
-    Private delayedState As String = "idle"
-    Private delayedStartTime As Double = 0
-
+    Private delayTicks As Double = 1.0 / 985248.0 ' Delay by one tick
+    Public DelayAttackForBug As Boolean = False
     Public Overrides Function ToString() As String
         Return $"A:{Attack} D:{Decay} S:{Sustain} R:{Release}, State: {state}, Level: {(CInt(level * 10) / 10).ToString}"
     End Function
-
+    Private Sub SafeSleep(ms As Int32, exec As [Delegate])
+        Dim newT As New Timer(ms)
+        AddHandler newT.Elapsed, Sub()
+                                     newT.Dispose()
+                                     exec.DynamicInvoke()
+                                 End Sub
+    End Sub
     Private Function RateToTime(rate As Integer, stage As String) As Double
-        ' SID ADSR map
-        Dim attackTimes() As Double = {0.002, 0.008, 0.016, 0.024, 0.038, 0.056, 0.068, 0.08, 0.1, 0.25, 0.5, 0.8, 1.0, 3.0, 5.0, 8.0}
+        ' SID ADSR map
+        Dim attackTimes() As Double = {0.002, 0.008, 0.016, 0.024, 0.038, 0.056, 0.068, 0.08, 0.1, 0.25, 0.5, 0.8, 1.0, 3.0, 5.0, 8.0}
         Dim decayReleaseTimes() As Double = {0.0064, 0.024, 0.048, 0.072, 0.114, 0.168, 0.204, 0.24, 0.3, 0.75, 1.5, 2.4, 3.0, 9.0, 15.0, 24.0}
         rate = Math.Max(0, Math.Min(rate, 15))
         Select Case stage
@@ -297,12 +288,12 @@ Public Class ADSR
                 Return attackTimes(rate)
             Case "decay"
                 Dim dur = decayReleaseTimes(rate) * 0.98 ' 0.98 because PAL speed
-                Dim ε = 0.99 ' εεεεεεεεεε
-                Return -Math.Log(1 - ε) / dur
+                Dim ε = 0.99 ' εεεεεεεεεε
+                Return -Math.Log(1 - ε) / dur
             Case "release"
                 Dim dur = decayReleaseTimes(rate) * 0.985 ' 0.98 because PAL speed
-                Dim ε = 0.99 ' εεεεεεεεεε
-                Return -Math.Log(1 - ε) / dur
+                Dim ε = 0.99 ' εεεεεεεεεε
+                Return -Math.Log(1 - ε) / dur
             Case Else
                 Return 0.1
         End Select
@@ -312,57 +303,60 @@ Public Class ADSR
         Return state = "idle"
     End Function
 
+    'Public Sub NoteOn(currentTime As Double)
+    '    attackStartLevel = level ' Remember where we were
+    '    startTime = currentTime
+    '    state = "attack"
+    'End Sub
     Public Sub NoteOn(currentTime As Double)
-        attackStartLevel = level ' Remember where we were
-        startTime = currentTime
-        state = "attack"
-        delayedStartTime = currentTime + delayTicks ' delay transition
-        delayedState = "attack"
+        attackStartLevel = level
+        If DelayAttackForBug Then
+            ' Introduce a 1-frame delay
+            DelayAttackForBug = False ' Reset the flag
+            SafeSleep(20, Sub()
+                              startTime = currentTime
+                              state = "attack"
+                          End Sub)
+        Else
+            startTime = currentTime
+            state = "attack"
+        End If
     End Sub
-
     Public Sub NoteOff(currentTime As Double)
         releaseStartLevel = level
         startTime = currentTime
         state = "release"
-        delayedStartTime = currentTime + delayTicks 'delay transition
-        delayedState = "release"
     End Sub
 
     Public Function GetLevel(currentTime As Double) As Double
-        Dim t As Double = currentTime - delayedStartTime
-        Select Case delayedState
+        Dim t As Double = currentTime - startTime - delayTicks ' Apply the delay
+        Select Case state
             Case "attack"
                 Dim dur = RateToTime(Attack, "attack")
                 level = attackStartLevel + (1.0 - attackStartLevel) * (t / dur)
                 If level >= 1.0 Then
                     level = 1.0
-                    If t >= dur Then ' cursed
-                        delayedState = "decay"
-                        delayedStartTime = currentTime
-                    End If
+                    state = "decay"
+                    startTime = currentTime
                 End If
             Case "decay"
                 Dim k = RateToTime(Decay, "decay")
                 Dim target = Sustain / 15.0
                 level = target + (1.0 - target) * Math.Exp(-k * t)
                 If level <= target + 0.001 Then ' close enough
-                    level = target
-                    If t >= RateToTime(Decay, "decay") Then
-                        delayedState = "sustain"
-                        delayedStartTime = currentTime
-                    End If
+                    level = target
+                    state = "sustain"
+                    startTime = currentTime
                 End If
             Case "sustain"
                 level = Sustain / 15.0 ' Sustain phase is constant
-            Case "release"
+            Case "release"
                 Dim k = RateToTime(Release, "release")
                 Dim target = 0
                 level = releaseStartLevel * Math.Exp(-k * t)
                 If level <= target + 0.001 Then ' close enough
-                    level = target
-                    If t >= RateToTime(Release, "release") Then
-                        delayedState = "idle"
-                    End If
+                    level = target
+                    state = "idle"
                 End If
             Case Else
                 level = 0
@@ -401,7 +395,23 @@ Public Class SIDFilter
         Tuple.Create(2000, 13500.0),
         Tuple.Create(2047, 13900.0)
     }
-
+    Private ReadOnly CutoffCurve6581 As New List(Of Tuple(Of Integer, Double)) From {
+        Tuple.Create(0, 220.0),
+Tuple.Create(250, 250.0),
+Tuple.Create(490, 425.0),
+Tuple.Create(495, 400.0),
+Tuple.Create(740, 1450.0),
+Tuple.Create(745, 1400.0),
+Tuple.Create(825, 3250.0),
+Tuple.Create(1000, 6000.0),
+Tuple.Create(1020, 6030.0),
+Tuple.Create(1025, 4200.0),
+Tuple.Create(1250, 12000.0),
+Tuple.Create(1500, 16000.0),
+Tuple.Create(1750, 17500.0),
+Tuple.Create(2000, 18000.0),
+Tuple.Create(2047, 18000.0)
+    }
     Public Sub New(Optional sampleRate As Double = 44100.0)
         Me.sampleRate = sampleRate
     End Sub
@@ -426,27 +436,98 @@ Public Class SIDFilter
         ' clamp just in case
         cutoffVal = Math.Clamp(cutoffVal, 0, 2047)
         ' interpolation of cutoffVal to actual freq
-        For i As Integer = 0 To cutoffCurve.Count - 2
-            Dim x0 = cutoffCurve(i).Item1
-            Dim y0 = cutoffCurve(i).Item2
-            Dim x1 = cutoffCurve(i + 1).Item1
-            Dim y1 = cutoffCurve(i + 1).Item2
+        If Mode6581 Then
+            For i As Integer = 0 To CutoffCurve6581.Count - 2
+                Dim x0 = CutoffCurve6581(i).Item1
+                Dim y0 = CutoffCurve6581(i).Item2
+                Dim x1 = CutoffCurve6581(i + 1).Item1
+                Dim y1 = CutoffCurve6581(i + 1).Item2
 
-            If cutoffVal >= x0 AndAlso cutoffVal <= x1 Then
-                Dim t = (cutoffVal - x0) / (x1 - x0)
-                Return (y0 + t * (y1 - y0)) + CutoffBias
-            End If
-        Next
-        ' out of bounds management
-        Return cutoffCurve.Last().Item2 + CutoffBias
+                If cutoffVal >= x0 AndAlso cutoffVal <= x1 Then
+                    Dim t = (cutoffVal - x0) / (x1 - x0)
+                    Return (y0 + t * (y1 - y0)) + CutoffBias ' it does not work
+                End If
+            Next
+            ' out of bounds management
+            Return CutoffCurve6581.Last().Item2 + CutoffBias
+        Else
+            For i As Integer = 0 To cutoffCurve.Count - 2
+                Dim x0 = cutoffCurve(i).Item1
+                Dim y0 = cutoffCurve(i).Item2
+                Dim x1 = cutoffCurve(i + 1).Item1
+                Dim y1 = cutoffCurve(i + 1).Item2
+
+                If cutoffVal >= x0 AndAlso cutoffVal <= x1 Then
+                    Dim t = (cutoffVal - x0) / (x1 - x0)
+                    Return (y0 + t * (y1 - y0)) + CutoffBias ' it does not work
+                End If
+            Next
+            ' out of bounds management
+            Return cutoffCurve.Last().Item2 + CutoffBias
+        End If
     End Function
 
-
-    Public Function ApplyFilter(input As Double) As Double
+    Public Function ApplyFilter2(input As Double) As Double
+        Dim baseResonance As Double = resonance / ResonanceDivider
         Dim f As Double = CutoffMultiplier * Math.Sin(Math.PI * InterpolatedCutoff() / sampleRate)
 
+        ' Introduce component variability
+        If Mode6581 Then
+            f *= 1.0 + (Rnd() - 0.5) * 0.02
+        End If
+
+        ' Apply non-linear amplifier behavior
+        If Mode6581 Then
+            Dim preGain As Double = (1.0 - (cutoffVal / 2047.0)) * 8.0
+            input += Math.Tanh(input * preGain) * 0.6
+        End If
+
+        ' State-variable filter processing
+        Dim hp As Double = input - lowpass - baseResonance * bandpass
+        If Mode6581 Then
+            ' Asymmetric clipping
+            hp += Math.Sin(hp * 3.0) * 0.2
+            hp = Math.Tanh(hp * 1.5)
+        End If
+        hp *= 0.67
+
+        Dim bp As Double = bandpass + f * hp
+        If Mode6581 Then
+            ' Clamp to simulate hardware limitations
+            bp = Math.Clamp(bp, -0.9, 1.5)
+        End If
+
+        Dim lp As Double = lowpass + f * bp
+
+        ' Update filter states
+        highpass = hp
+        bandpass = bp
+        lowpass = lp
+
+        ' Combine outputs based on filter type
+        Dim output As Double = 0.0
+        If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
+        If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
+        If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
+
+        ' Apply final asymmetric distortion
+        If Mode6581 Then
+            Dim asymBias As Double = 0.5
+            output += Math.Tanh(output + asymBias) * 0.2
+            output -= Math.Tanh(output - asymBias) * 0.2
+        End If
+
+        Return output
+    End Function
+    Public Function ApplyFilter(input As Double) As Double
+        Dim freq = InterpolatedCutoff()
+        Dim f As Double = CutoffMultiplier * Math.Sin(Math.PI * freq / sampleRate)
+        ' Introduce component variability
+        If Mode6581 Then
+            f *= 1.0 + (Rnd() - 0.5) * 0.02
+        End If
         ' resonance managment
-        Dim adjustedResonance As Double = resonance
+        Dim adjustedResonance As Double = resonance * (1 - (freq / 18000))
         Dim q As Double = 1.0 - (adjustedResonance / ResonanceDivider)
 
         ' distortion🔥🔥🔥🔥
@@ -457,12 +538,20 @@ Public Class SIDFilter
         End If
         ' svf filter
         Dim hp As Double = input - lowpass - q * bandpass
+        If Mode6581 Then
+            ' Asymmetric clipping
+            hp += 0.5
+            hp = Math.Tanh(hp * 1)
+            hp -= 0.5
+        End If
+        hp *= 0.67 'damp
         If (filterType And EFilterType.BandPass) <> 0 AndAlso Mode6581 Then
             hp = Math.Clamp(hp, -0.7, 2) ' crust
         End If
         Dim bp As Double = bandpass + f * hp
-        If (filterType And EFilterType.LowPass) <> 0 AndAlso Mode6581 Then
-            bp = Math.Clamp(bp, -1, 2) ' crust v2
+        If Mode6581 Then
+            ' Clamp to simulate hardware limitations
+            bp = Math.Clamp(bp, -0.9, 1.5)
         End If
         Dim lp As Double = lowpass + f * bp
         highpass = hp
@@ -474,9 +563,14 @@ Public Class SIDFilter
         If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
         If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
         If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
+        ' Apply final asymmetric distortion
+        If Mode6581 Then
+            Dim asymBias As Double = 1
+            output += Math.Tanh(output + asymBias) * 0.2
+            output -= Math.Tanh(output - asymBias) * 0.2
+        End If
         Return output
     End Function
-
     Public Sub Reset()
         bandpass = 0
         lowpass = 0
