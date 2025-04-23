@@ -22,6 +22,7 @@ Partial Class Form1
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
+        components = New ComponentModel.Container()
         Button1 = New Button()
         OpenFileDialog1 = New OpenFileDialog()
         BackgroundWorker1 = New ComponentModel.BackgroundWorker()
@@ -44,6 +45,7 @@ Partial Class Form1
         NumericUpDown3 = New NumericUpDown()
         Label3 = New Label()
         NumericUpDown2 = New NumericUpDown()
+        ClockTimer = New Timer(components)
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox1.SuspendLayout()
         CType(NumericUpDown4, ComponentModel.ISupportInitialize).BeginInit()
@@ -229,6 +231,7 @@ Partial Class Form1
         NumericUpDown3.Increment = New Decimal(New Integer() {50, 0, 0, 0})
         NumericUpDown3.Location = New Point(155, 55)
         NumericUpDown3.Maximum = New Decimal(New Integer() {20154, 0, 0, 0})
+        NumericUpDown3.Minimum = New Decimal(New Integer() {20154, 0, 0, Integer.MinValue})
         NumericUpDown3.Name = "NumericUpDown3"
         NumericUpDown3.Size = New Size(85, 27)
         NumericUpDown3.TabIndex = 2
@@ -252,6 +255,10 @@ Partial Class Form1
         NumericUpDown2.Size = New Size(85, 27)
         NumericUpDown2.TabIndex = 0
         NumericUpDown2.Value = New Decimal(New Integer() {167, 0, 0, 131072})
+        ' 
+        ' ClockTimer
+        ' 
+        ClockTimer.Interval = 1
         ' 
         ' Form1
         ' 
@@ -307,5 +314,6 @@ Partial Class Form1
     Friend WithEvents Label4 As Label
     Friend WithEvents NumericUpDown3 As NumericUpDown
     Friend WithEvents CheckBox6 As CheckBox
+    Friend WithEvents ClockTimer As Timer
 
 End Class

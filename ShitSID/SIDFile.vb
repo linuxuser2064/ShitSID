@@ -2,6 +2,7 @@
 Imports System.IO
 
 Public Class SidFile
+    Public Property IsRSID As Boolean
     Public Property LoadAddress As UShort
     Public Property InitAddress As UShort
     Public Property PlayAddress As UShort
@@ -9,6 +10,7 @@ Public Class SidFile
     Public Property StartSong As UShort
     Public Property Speed As UInteger
     Public Property Flags As UInteger
+    Public Property FlagBits As BitArray
     Public Property StartPage As Byte
     Public Property PageLength As Byte
     Public Property SecondSIDAddress As Byte
@@ -26,12 +28,13 @@ Public Class SidFile
         If id <> "PSID" AndAlso id <> "RSID" Then
             'Throw New Exception("Not a PSID file")
         End If
-
+        Dim isRSID As Boolean
+        If id = "RSID" Then isRSID = True
         ' Read Version (we'll assume this is PSIDv2 for now)
         Dim version = BinaryPrimitives.ReadUInt16BigEndian(raw.AsSpan(4, 2)) ' Big endian: byte 5 is more significant
 
         ' PSIDv2 header parsing (all numbers are in big-endian)
-        Dim dataOffset = raw(7) ' fucking hack
+        Dim dataOffset = BinaryPrimitives.ReadUInt16BigEndian(raw.AsSpan(6, 2))
         Dim loadAddress = BinaryPrimitives.ReadUInt16BigEndian(raw.AsSpan(8, 2)) ' Big endian: bytes 8 and 9
         Dim initAddress = BinaryPrimitives.ReadUInt16BigEndian(raw.AsSpan(10, 2)) ' Big endian: bytes 10 and 11
         Dim playAddress = BinaryPrimitives.ReadUInt16BigEndian(raw.AsSpan(12, 2)) ' Big endian: bytes 12 and 13
@@ -43,6 +46,7 @@ Public Class SidFile
         Dim studioName = Text.Encoding.ASCII.GetString(raw.AsSpan(86, 32)).Trim(vbNullChar)
         ' Additional fields based on PSIDv2 header
         Dim flags = BinaryPrimitives.ReadUInt32BigEndian(raw.AsSpan(76, 4)) ' Big endian: bytes 76 to 79
+        Dim flagBits As New BitArray({raw(76), raw(77), raw(78), raw(79)})
         Dim startPage = raw(78)
         Dim pageLength = raw(79)
         Dim secondSIDAddress = raw(80)
@@ -69,6 +73,7 @@ Public Class SidFile
             .StartSong = startSong,
             .Speed = speed,
             .Flags = flags,
+            .FlagBits = flagBits,
             .StartPage = startPage,
             .PageLength = pageLength,
             .SecondSIDAddress = secondSIDAddress,
@@ -76,7 +81,8 @@ Public Class SidFile
             .Data = programData,
             .SongName = songName,
             .SongArtist = artistName,
-            .SongStudio = studioName
+            .SongStudio = studioName,
+            .IsRSID = isRSID
         }
     End Function
 End Class

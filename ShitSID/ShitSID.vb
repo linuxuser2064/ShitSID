@@ -1,4 +1,7 @@
-﻿Public Class ShitSID
+﻿Imports System.Drawing.Imaging
+Imports System.Timers
+
+Public Class ShitSID
     Public Filter As New SIDFilter(44100)
     Public Voices(2) As Voice
     Public currentTime As Double = 0
@@ -6,13 +9,14 @@
     Public filterCutoffHi As Integer = 0
     Public filterResonance As Integer = 0
     Public filterMode As Integer = 0 ' 0-7 (bit flags)
+    Const ClocksPerFrame = 985248.0
     Public Sub New()
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
         Next
     End Sub
     Public Sub Clock()
-        currentTime += 1.0 / 985248.0
+        currentTime += 1.0 / ClocksPerFrame
     End Sub
 
     Public Function GetSample() As Double
@@ -115,7 +119,7 @@
                 ElseIf bits(7) Then
                     voice.Waveform = "noise"
                 Else
-                    voice.Waveform = "square" 'fallback
+                    voice.Waveform = "none" ' no audio
                 End If
             Case 5 ' ATTACK/DECAY
                 voice.Envelope.Attack = (value >> 4) And &HF
@@ -189,7 +193,13 @@ Public Class Voice
     Public Sub NoteOn(currentTime As Double)
         Envelope.NoteOn(currentTime)
     End Sub
-
+    Private Sub SafeSleep(ms As Int32, exec As [Delegate])
+        Dim newT As New Timer(ms)
+        AddHandler newT.Elapsed, Sub()
+                                     newT.Dispose()
+                                     exec.DynamicInvoke()
+                                 End Sub
+    End Sub
     Public Sub NoteOff(currentTime As Double)
         Envelope.NoteOff(currentTime)
     End Sub
@@ -257,27 +267,31 @@ Public Class Voice
         Return wave * envLevel
     End Function
 End Class
+
 Public Class ADSR
-    Public Attack As Integer = 0     ' 0–15
-    Public Decay As Integer = 0      ' 0–15
-    Public Sustain As Double = 15   ' 0-15
-    Public Release As Integer = 0    ' 0–15
+    Public Attack As Integer = 0 ' 0–15
+    Public Decay As Integer = 0 ' 0–15
+    Public Sustain As Double = 15 ' 0-15
+    Public Release As Integer = 0 ' 0–15
     Public releaseStartLevel As Double = 0
     Public state As String = "idle"
     Public level As Double = 0
     Public startTime As Double = 0
     Public decayStartLevel As Double
     Public attackStartLevel As Double = 0
+    Private delayTicks As Double = 1.0 / 985248.0 ' delay one tick
+    Private delayedState As String = "idle"
+    Private delayedStartTime As Double = 0
+
     Public Overrides Function ToString() As String
         Return $"A:{Attack} D:{Decay} S:{Sustain} R:{Release}, State: {state}, Level: {(CInt(level * 10) / 10).ToString}"
     End Function
+
     Private Function RateToTime(rate As Integer, stage As String) As Double
         ' SID ADSR map
         Dim attackTimes() As Double = {0.002, 0.008, 0.016, 0.024, 0.038, 0.056, 0.068, 0.08, 0.1, 0.25, 0.5, 0.8, 1.0, 3.0, 5.0, 8.0}
         Dim decayReleaseTimes() As Double = {0.0064, 0.024, 0.048, 0.072, 0.114, 0.168, 0.204, 0.24, 0.3, 0.75, 1.5, 2.4, 3.0, 9.0, 15.0, 24.0}
-
         rate = Math.Max(0, Math.Min(rate, 15))
-
         Select Case stage
             Case "attack"
                 Return attackTimes(rate)
@@ -299,58 +313,60 @@ Public Class ADSR
     End Function
 
     Public Sub NoteOn(currentTime As Double)
-        attackStartLevel = level  ' Remember where we were
+        attackStartLevel = level ' Remember where we were
         startTime = currentTime
         state = "attack"
+        delayedStartTime = currentTime + delayTicks ' delay transition
+        delayedState = "attack"
     End Sub
-
 
     Public Sub NoteOff(currentTime As Double)
         releaseStartLevel = level
         startTime = currentTime
         state = "release"
+        delayedStartTime = currentTime + delayTicks 'delay transition
+        delayedState = "release"
     End Sub
 
     Public Function GetLevel(currentTime As Double) As Double
-        Dim t As Double = currentTime - startTime
-
-        Select Case state
+        Dim t As Double = currentTime - delayedStartTime
+        Select Case delayedState
             Case "attack"
                 Dim dur = RateToTime(Attack, "attack")
                 level = attackStartLevel + (1.0 - attackStartLevel) * (t / dur)
                 If level >= 1.0 Then
                     level = 1.0
-                    state = "decay"
-                    startTime = currentTime
+                    If t >= dur Then ' cursed
+                        delayedState = "decay"
+                        delayedStartTime = currentTime
+                    End If
                 End If
-
-
             Case "decay"
                 Dim k = RateToTime(Decay, "decay")
                 Dim target = Sustain / 15.0
                 level = target + (1.0 - target) * Math.Exp(-k * t)
                 If level <= target + 0.001 Then ' close enough
                     level = target
-                    state = "sustain"
-                    startTime = currentTime
+                    If t >= RateToTime(Decay, "decay") Then
+                        delayedState = "sustain"
+                        delayedStartTime = currentTime
+                    End If
                 End If
-
             Case "sustain"
                 level = Sustain / 15.0 ' Sustain phase is constant
-
             Case "release"
                 Dim k = RateToTime(Release, "release")
                 Dim target = 0
                 level = releaseStartLevel * Math.Exp(-k * t)
                 If level <= target + 0.001 Then ' close enough
                     level = target
-                    state = "idle"
+                    If t >= RateToTime(Release, "release") Then
+                        delayedState = "idle"
+                    End If
                 End If
-
             Case Else
                 level = 0
         End Select
-
         Return level
     End Function
 End Class

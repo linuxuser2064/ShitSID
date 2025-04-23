@@ -2,6 +2,7 @@
 Imports Highbyte.DotNet6502
 Imports System.IO
 Imports NAudio.CoreAudioApi
+Imports Highbyte.DotNet6502.Instructions
 Public Class Form1
     Public sid As New ShitSID()
     Dim cpu As New CPU
@@ -33,9 +34,34 @@ Public Class Form1
         sid = New ShitSID()
         cpu = New CPU()
         mem = New Memory()
-
+        cpu.SP = 255
+        mem(1) = &H37
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
-
+        If sidfile.FlagBits(0) AndAlso sidfile.IsRSID = False Then
+            MsgBox("This tune uses Sidplayer MUS data apparently. It may not play.", MsgBoxStyle.Information)
+        End If
+        If sidfile.FlagBits(1) AndAlso sidfile.IsRSID Then
+            ' this happens on every single RSID
+            'Throw New InvalidDataException("Tune needs C64 BASIC")
+        End If
+        If sidfile.FlagBits(2) = True AndAlso sidfile.FlagBits(3) = False Then
+            delayMS = 16 ' NTSC
+        End If
+        If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
+            mem(&H2A6) = 1 ' PAL
+        End If
+        If sidfile.FlagBits(4) = False AndAlso sidfile.FlagBits(5) = True Then
+            ' 6581 mode
+            CheckBox6.Checked = True
+            sid.Filter.Mode6581 = True
+        End If
+        If sidfile.Speed Or 4294967167 = 1 Then
+            delayMS = 16 ' CIA timer - ~60hz
+            mem(&H2A6) = 0
+        Else
+            delayMS = 20 ' raster interrupt - 50hz
+            mem(&H2A6) = 1
+        End If
         ' Set song number from UI or default
         If NumericUpDown1.Value > 0 Then
             cpu.A = NumericUpDown1.Value - 1
@@ -47,15 +73,26 @@ Public Class Form1
         provider = New SidAudioProvider(sid)
 
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 8)
-        waveOut.Init(provider)
-        waveOut.Play()
-
+        ' zero out ram
+        For i = 0 To &HFFFF
+            mem(i) = 0
+        Next
         ' Load SID file data into memory
         For i = 0 To sidfile.Data.Length - 1
             mem(sidfile.LoadAddress + i) = sidfile.Data(i)
         Next
-
+        ' Map SID writes
+        For i = &HD400 To &HD41F ' 54272 to 54303
+            mem.MapWriter(i, Sub(addr As UShort, value As Byte)
+                                 sid.WriteRegister(addr, value)
+                             End Sub)
+        Next
+        ' zero out SID
+        For i = 0 To &H1F
+            sid.WriteRegister(&HD400 + i, 0)
+        Next
         ' Run init routine
+        Dim initTimer = Stopwatch.StartNew
         While True
             Dim state = cpu.ExecuteOneInstruction(mem)
             If state.LastInstructionExecResult.OpCodeByte = &H60 Then
@@ -65,53 +102,20 @@ Public Class Form1
                 MsgBox("BRK encountered")
                 Exit While
             End If
+            If initTimer.Elapsed.TotalSeconds > 10 Then
+                MsgBox("Init stuck!")
+                Exit While
+            End If
         End While
-
-        ' Map SID writes
-        For i = &HD400 To &HD41F ' 54272 to 54303
-            mem.MapWriter(i, Sub(addr As UShort, value As Byte)
-                                 sid.WriteRegister(addr, value)
-                             End Sub)
-        Next
-
         ' Start background audio pumping
-        BackgroundWorker1.RunWorkerAsync()
+        If initTimer.Elapsed.TotalSeconds <= 10 Then
+            initTimer.Stop()
+            BackgroundWorker1.RunWorkerAsync()
+        End If
+        waveOut.Init(provider)
+        waveOut.Play()
     End Sub
     Private Sub OpenFileDialog1_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog1.FileOk
-        'If sidfile IsNot Nothing Then
-        '    ' this means we're already playing
-        '    Application.Restart()
-        'End If
-        'sidfile = SidFile.Load(OpenFileDialog1.FileName)
-        'If NumericUpDown1.Value > 0 Then
-        '    cpu.A = NumericUpDown1.Value - 1
-        'Else
-        '    cpu.A = sidfile.StartSong - 1
-        'End If
-        'cpu.PC = sidfile.InitAddress
-        'provider = New SidAudioProvider(sid)
-        'waveOut.Init(provider)
-        'waveOut.Play()
-
-        'For i = 0 To sidfile.Data.Length - 1
-        '    mem(sidfile.LoadAddress + i) = sidfile.Data(i)
-        'Next
-        'While True
-        '    Dim state = cpu.ExecuteOneInstruction(mem)
-        '    If state.LastInstructionExecResult.OpCodeByte = &H60 Then
-        '        Exit While
-        '    End If
-        '    If state.LastInstructionExecResult.OpCodeByte = &H0 Then
-        '        MsgBox("BRK encountered")
-        '        Exit While
-        '    End If
-        'End While
-        'For i = 54272 To 54303
-        '    mem.MapWriter(i, Sub(addr As UShort, value As Byte)
-        '                         sid.WriteRegister(addr, value)
-        '                     End Sub)
-        'Next
-        'BackgroundWorker1.RunWorkerAsync()
         ' if this dies im blaming chatgp
         LoadAndPlaySID()
     End Sub
@@ -124,28 +128,26 @@ Public Class Form1
                 If v.pendingNoteOn Then
                     v.NoteOn(sid.currentTime)
                     v.pendingNoteOn = False
-                ElseIf v.pendingNoteOff Then
-                    v.NoteOff(sid.currentTime)
+                End If
+                If v.pendingNoteOff Then
+                    v.NoteOff(sid.currentTime) ' this will never wo-
                     v.pendingNoteOff = False
                 End If
             Next
             cpu.PC = sidfile.PlayAddress
+            Dim cycCount = 0
             While True
                 Dim state = cpu.ExecuteOneInstruction(mem)
-                If state.LastInstructionExecResult.OpCodeByte = &H60 Then
+                cycCount += state.CyclesConsumed
+                If cycCount >= 19709 Or watch.ElapsedMilliseconds >= delayMS Then
                     Exit While
                 End If
             End While
-            'For i = 54272 To 54303
-            '    sid.WriteRegister(i, mem(i))
-            'Next
-
             While watch.ElapsedMilliseconds < delayMS
                 If BackgroundWorker1.CancellationPending Then
                     e.Cancel = True
                     Exit Sub
                 End If
-
             End While
             watch.Stop()
             watch.Reset()
