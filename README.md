@@ -5,16 +5,15 @@ A crusty (?) SID emulator written in Visual Basic.
 - Basic waveform emulation
 - Duty cycle support on pulse wave
 - Special 4-bit duty cycle mode for extra crustyness
-- Linear ADSR, adjusted to be SID-like
+- SID-like exponential ADSR
 - ADSR attack always starts at 0 volume
-- No SID filter
+- Filter emulation with broken highpass
 - "Pitchable" noise
 - Channels are mutable
 - Statistics window for debugging
 
 # Issues
-- Most MoN songs, even PSID's, don't work properly.
-- On some Rob Hubbard songs, the ADSR triggers 1 tick too late
+- On older Rob Hubbard songs, the ADSR is broken.
 
 # Usage
 To load and play a .SID file, press "Load SID file".
