@@ -36,7 +36,6 @@ Public Class SidAudioProvider
         Else
             cpu.A = 0
         End If
-        cpu.ExecuteUntilBRK(mem)
         For i = &HD400 To &HD41F ' 54272 to 54303
             mem.MapWriter(i, Sub(addr As UShort, value As Byte)
                                  sid.WriteRegister(addr, value)
@@ -62,6 +61,7 @@ Public Class SidAudioProvider
                                  TimerActive = bits(0)
                                  Console.WriteLine($"Timer active: {TimerActive}")
                              End Sub)
+        cpu.ExecuteUntilBRK(mem)
         If sidfile.PlayAddress = 0 Then ' RSID mode activate
             playAddr = BitConverter.ToUInt16({mem(788), mem(789)}) ' kernal IRQ vector (rarely used)
             If playAddr = 0 Then
@@ -77,8 +77,7 @@ Public Class SidAudioProvider
         Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
         NMIVec = BitConverter.ToUInt16({mem(65530), mem(65531)})
         Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
-        cpuClockPhase = If(UseNTSC, 734, 881)
-
+        cpuClockPhase = If(UseNTSC, (sampleRate \ 60) - 1, (sampleRate \ 50) - 1)
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
         For i = 0 To count - 1
@@ -86,8 +85,7 @@ Public Class SidAudioProvider
             sidPhase += (SID_CLOCK_RATE / sampleRate)
             cpuClockPhase += 1
 
-            ' --- optional: old frame-based playAddr jump ---
-            If cpuClockPhase >= If(UseNTSC, 735, 882) AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)
+            If cpuClockPhase >= If(UseNTSC, (sampleRate \ 60) - 1, (sampleRate \ 50) - 1) AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)
                 ' fake interrupt
                 cpu.PushWordToStack(cpu.PC, mem)
                 cpu.PushByteToStack(0, mem) ' fuck da flags this is purely for stack alignment
@@ -126,7 +124,7 @@ Public Class SidAudioProvider
             End While
 
             ' --- write sample to buffer ---
-            buffer(offset + i) = CSng(sid.GetSample() * Volume)
+            buffer(offset + i) = CSng(sid.GetSample * Volume) ' test
         Next
 
         Return count

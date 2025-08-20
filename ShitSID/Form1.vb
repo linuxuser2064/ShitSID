@@ -4,6 +4,11 @@ Imports System.IO
 Imports NAudio.CoreAudioApi
 Imports System.Runtime.InteropServices
 Public Class Form1
+
+
+    Public SAMPLERATE = 88200
+
+
     Public sid As ShitSID
     Public cpu As New CPU
     Dim delayMS = 20 ' this does not work
@@ -32,16 +37,8 @@ Public Class Form1
             waveOut = Nothing
         End If
 
-        ' Cancel background worker if it's running
-        If BackgroundWorker1.IsBusy Then
-            BackgroundWorker1.CancelAsync()
-            While BackgroundWorker1.IsBusy
-                Application.DoEvents()
-            End While
-        End If
-
         ' Reinitialize components
-        sid = New ShitSID()
+        sid = New ShitSID(SAMPLERATE)
         cpu = New CPU()
         mem = New Memory()
         cpu.SP = 2
@@ -86,30 +83,28 @@ Public Class Form1
         Else
             sid.Voices(2).MuteVoice = False
         End If
-        sid.Filter.CutoffMultiplier = NumericUpDown2.Value
         sid.Filter.CutoffBias = NumericUpDown3.Value
         sid.Filter.ResonanceDivider = NumericUpDown4.Value
         CheckBox6_CheckedChanged(Nothing, Nothing)
         cpu.PC = sidfile.InitAddress
-        Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X")}")
-        provider = New SidAudioProvider(sid)
+        Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
+        provider = New SidAudioProvider(sid, SAMPLERATE)
         If CheckBox5.Checked Then
             provider.UseNTSC = True
         Else
             provider.UseNTSC = False
         End If
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
-        ' Run init routine
-        ' Start background audio pumping
-        'If initTimer.Elapsed.TotalSeconds <= 10 Then
-        '    initTimer.Stop()
-        'BackgroundWorker1.RunWorkerAsync()
-        'End If
         provider.sidfile = sidfile
         provider.InitSIDFile()
         waveOut.Init(provider)
         waveOut.Play()
         provider.runCPU = True
+        For Each x As Control In Me.Controls
+            x.Enabled = True
+        Next
+        PlayPauseState = True
+        Button4.Text = "Pause"
     End Sub
     Public Sub pr(str As String)
         Console.WriteLine(str)
@@ -117,32 +112,6 @@ Public Class Form1
     Private Sub OpenFileDialog1_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog1.FileOk
         ' if this dies im blaming chatgp
         LoadAndPlaySID()
-    End Sub
-
-    Private Sub BackgroundWorker1_DoWork(sender As Object, e As System.ComponentModel.DoWorkEventArgs) Handles BackgroundWorker1.DoWork
-        Dim watch As New Stopwatch
-        While Not e.Cancel
-            watch.Start()
-            cpu.PC = sidfile.PlayAddress
-            Dim cycCount = 0
-            While True
-                Dim state = cpu.ExecuteOneInstruction(mem)
-                'Console.WriteLine($"{state.LastInstructionExecResult.OpCodeByte.ToString("X2")} {mem(state.PCBeforeLastOpCodeExecuted + 1).ToString("X2")} {mem(state.PCBeforeLastOpCodeExecuted + 2).ToString("X2")} {mem(state.PCBeforeLastOpCodeExecuted + 3).ToString("X2")} at {state.PCBeforeLastOpCodeExecuted.ToString()}")
-                cycCount += state.CyclesConsumed
-                If cycCount >= 19709 Or watch.ElapsedMilliseconds >= delayMS Then
-                    Exit While
-                End If
-            End While
-            While watch.ElapsedMilliseconds < delayMS
-                If BackgroundWorker1.CancellationPending Then
-                    e.Cancel = True
-                    Exit Sub
-                End If
-            End While
-            watch.Stop()
-            watch.Reset()
-
-        End While
     End Sub
 
     Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
@@ -200,13 +169,6 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         End If
     End Sub
 
-    Private Sub NumericUpDown2_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged
-        If sid IsNot Nothing Then
-
-            sid.Filter.CutoffMultiplier = NumericUpDown2.Value
-        End If
-    End Sub
-
     Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown3.ValueChanged
         If sid IsNot Nothing Then
             sid.Filter.CutoffBias = NumericUpDown3.Value
@@ -239,6 +201,11 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        For Each x As Control In Me.Controls
+            x.Enabled = False
+        Next
+        Button1.Enabled = True
+        ComboBox1.Enabled = True
     End Sub
 
     Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
@@ -258,7 +225,23 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub RadioButton1_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton1.CheckedChanged
         If sid IsNot Nothing Then
-            sid.VolumeRegisterSampleMode = RadioButton1.Checked
+            sid.VolumeSampleMode = RadioButton1.Checked
         End If
+    End Sub
+    Dim PlayPauseState As Boolean = False
+    Private Sub Button4_Click(sender As Object, e As EventArgs) Handles Button4.Click
+        If PlayPauseState Then ' go to paused
+            PlayPauseState = False
+            Button4.Text = "Play"
+            waveOut.Pause()
+        Else
+            PlayPauseState = True
+            Button4.Text = "Pause"
+            waveOut.Play()
+        End If
+    End Sub
+
+    Private Sub ComboBox1_TextUpdate(sender As Object, e As EventArgs) Handles ComboBox1.TextChanged
+        SAMPLERATE = CInt(ComboBox1.Text)
     End Sub
 End Class

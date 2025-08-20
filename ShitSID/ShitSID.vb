@@ -1,7 +1,8 @@
-﻿Imports Highbyte.DotNet6502.Instructions
+﻿Imports NAudio.Wave
 
 Public Class ShitSID
-    Public Filter As New SIDFilter(44100)
+    Public SampleRate As Int32 = 44100
+    Public Filter As SIDFilter
     Public Voices(2) As Voice
     Public currentTime As Double = 0
     Public filterCutoffLo As Integer = 0
@@ -9,11 +10,13 @@ Public Class ShitSID
     Public filterResonance As Integer = 0
     Public filterMode As Integer = 0 ' 0-7 (bit flags)
     Public bypassFilter As Boolean = False
-    Public VolumeRegisterSampleMode As Boolean = True
+    Public VolumeSampleMode As Boolean = True
     Public VolumeRegister As Byte
     Public MuteVoice3 As Boolean = False
     Const ClocksPerFrame = 985248.0
-    Public Sub New()
+    Public Sub New(Optional samplerate As Int32 = 44100)
+        Me.SampleRate = samplerate
+        Filter = New SIDFilter(samplerate)
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
         Next
@@ -24,7 +27,19 @@ Public Class ShitSID
             Voices(i).Envelope.Clock()
         Next
     End Sub
+    Public Function LowPassSample(x As Double, cutoffFreq As Double, sampleRate As Double) As Double
+        Static lastOutput As Double = 0 ' persists across calls
+        If sampleRate > cutoffFreq * 2 Then
+            Dim dt As Double = 1.0 / sampleRate
+            Dim rc As Double = 1.0 / (2 * Math.PI * cutoffFreq)
+            Dim alpha As Double = dt / (rc + dt)
 
+            lastOutput += alpha * (x - lastOutput)
+            Return lastOutput
+        Else
+            Return x
+        End If
+    End Function
     Public Function GetSample() As Double
         Dim output As Double = 0
         Dim filterInput As Double = 0
@@ -42,13 +57,13 @@ Public Class ShitSID
         If Not bypassFilter Then
             output += Filter.ApplyFilter(filterInput)
         End If
-        If VolumeRegisterSampleMode Then
+        If VolumeSampleMode Then
             output += (VolumeRegister - 15) / 4
         Else
             output *= VolumeRegister / 15.0
             output += (VolumeRegister - 15) / 4
         End If
-        Return output / 4
+        Return LowPassSample(output / 4, 17640, SampleRate)
     End Function
 
 
@@ -92,7 +107,6 @@ Public Class ShitSID
         If voiceNum > 2 Then Return
         Dim voice = Voices(voiceNum)
         Dim subReg = reg Mod 7
-        Dim out = ""
         Select Case subReg
             Case 0 ' FREQ LO
                 voice.FreqLo = value
@@ -147,6 +161,13 @@ Public Class ShitSID
         If (filterMode And 4) <> 0 Then mode = mode Or SIDFilter.EFilterType.HighPass
 
         Filter.SetFilterType(mode)
+    End Sub
+    Public Sub Reset()
+        currentTime = 0
+        Filter = New SIDFilter(SampleRate)
+        For i As Integer = 0 To 2
+            Voices(i) = New Voice(Me, i)
+        Next
     End Sub
 End Class
 Public Class Voice
@@ -263,7 +284,7 @@ Public Class Voice
             Case "tri+saw"
                 dacInput = triVal Or sawVal
             Case "tri+pulse"
-                dacInput = If(acc < DutyCycle * &HFFF, &HFFF, TriPulseWF(acc) * 16)
+                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF(acc) * 16)
             Case "saw+pulse"
                 dacInput = sawVal And pulseVal
             Case Else
@@ -288,6 +309,7 @@ Public Class EnvelopeGenerator
 
     ' this is a conversion from the reSIDfp EnvelopeGenerator class
     ' credit them, not me
+    ' reSIDfp is licensed under the GPLv2
     ' Copyright 2011-2020 Leandro Nini <drfiemost@users.sourceforge.net>
     ' Copyright 2018 VICE Project
     ' Copyright 2007-2010 Antti Lankila
@@ -331,7 +353,9 @@ Public Class EnvelopeGenerator
     Public Sub New()
         Reset()
     End Sub
-
+    Public Overrides Function ToString() As String
+        Return $"A: {Attack} D: {Decay} S: {Sustain} R: {Release} Lvl: {env3}"
+    End Function
     Public Sub Reset()
         envelopePipeline = 0
         statePipeline = 0
@@ -587,6 +611,8 @@ Public Class SIDFilter
 
         ' Standard SVF structure
         Dim hp As Double = input - lowpass - q * bandpass
+        'hp *= 0.67 ' damping makes a comeback
+        ' nvm i upped sample rate lol
         Dim bp As Double = bandpass + f * hp
         Dim lp As Double = lowpass + f * bp
 
