@@ -5,18 +5,20 @@ A crusty (?) SID emulator written in Visual Basic.
 - Basic waveform emulation
 - Partial mixed waveform support
 - Duty cycle support on pulse wave
-- Special 4-bit duty cycle mode for extra crustyness
-- SID exponential ADSR (code conversion from reSIDfp)
-- Half-ass filter emulationm with switchable 8580 and 6581 modes
+- Special 4-bit duty cycle mode for extra crustiness
+- SID pseudo-exponential ADSR (code conversion from reSIDfp)
+- Half-ass filter emulation with switchable 8580 and 6581 modes
 - Half-ass filter distortion emulation
+- Half-ass RSID support
 - "Pitchable" noise
-- Channels are mutable
+- Channels are mute-able
 - Statistics window for debugging
 - $D418 sample support
+- PAL/NTSC timing support
 
 # Issues
-- On some songs the filter does not work (destabilizes because of bad emulation).
-- On some other songs there appears to be memory or stack corruption, and crash after a bit.
+- Chris Hülsbeck's songs that use samples do not play.
+- Martin Galway's songs that use sampels do not play.
 
 # Usage
 To load and play a .SID file, press "Load SID file".
@@ -29,11 +31,14 @@ There's also a 4-bit duty cycle mode included. To toggle it press "4-bit duty cy
 Tech details: The 4-bit duty mode makes the SID only use the upper 4 bits of the duty cycle, giving 16 levels.
 
 ### Filter controls
-- Cutoff multiplier: The amount of cutoff variance that the filter has.
 - Cutoff bias: the offset that the cutoff has, in Hz.
 - Resonance divider: The amount by which the resonance is divided.
 - 6581 filter mode: Enables the experimental SID 6581-like filter.
 - Disable filter: Disables the SID filter entirely.
+
+### Master volume register controls
+- Sample mode: Makes the master volume register output as a seperate channel. (good for sampled songs)
+- Volume mode: Makes the master volume register affect the volume also. (good for songs that use the master volume)
 
 The rest should be pretty self-explainatory.
 
