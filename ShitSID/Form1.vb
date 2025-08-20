@@ -2,18 +2,28 @@
 Imports Highbyte.DotNet6502
 Imports System.IO
 Imports NAudio.CoreAudioApi
-Imports Highbyte.DotNet6502.Instructions
+Imports System.Runtime.InteropServices
 Public Class Form1
-    Public sid As New ShitSID()
-    Dim cpu As New CPU
-    Dim delayMS = 20
-    Dim mem As New Memory(65536)
+    Public sid As ShitSID
+    Public cpu As New CPU
+    Dim delayMS = 20 ' this does not work
+    Public mem As New Memory(65536)
     Private waveOut As WasapiOut = Nothing
     Private provider As SidAudioProvider = Nothing
+    ' QueryPerformanceCounter (import from Windows API)
+    <DllImport("kernel32.dll", CharSet:=CharSet.Auto)>
+    Public Shared Function QueryPerformanceCounter(ByRef lpPerformanceCount As Long) As Boolean
+    End Function
+
+    ' QueryPerformanceFrequency (import from Windows API)
+    <DllImport("kernel32.dll", CharSet:=CharSet.Auto)>
+    Public Shared Function QueryPerformanceFrequency(ByRef lpFrequency As Long) As Boolean
+    End Function
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         OpenFileDialog1.ShowDialog()
     End Sub
-    Dim sidfile As SidFile
+    Public sidfile As SidFile
+    Public fakeClockCount = 0
     Private Sub LoadAndPlaySID()
         ' Stop and dispose existing audio if playing
         If waveOut IsNot Nothing Then
@@ -34,7 +44,7 @@ Public Class Form1
         sid = New ShitSID()
         cpu = New CPU()
         mem = New Memory()
-        cpu.SP = 255
+        cpu.SP = 2
         mem(1) = &H37
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
         If sidfile.FlagBits(2) = True AndAlso sidfile.FlagBits(3) = False Then
@@ -79,65 +89,30 @@ Public Class Form1
         sid.Filter.CutoffMultiplier = NumericUpDown2.Value
         sid.Filter.CutoffBias = NumericUpDown3.Value
         sid.Filter.ResonanceDivider = NumericUpDown4.Value
-        If CheckBox6.Checked Then
-            sid.Filter.Mode6581 = True
-            sid.Filter.CutoffMultiplier = 2
-            sid.Filter.CutoffBias = 325
-            sid.Filter.ResonanceDivider = 4
-        Else
-            sid.Filter.Mode6581 = False
-        End If
+        CheckBox6_CheckedChanged(Nothing, Nothing)
         cpu.PC = sidfile.InitAddress
+        Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X")}")
         provider = New SidAudioProvider(sid)
         If CheckBox5.Checked Then
-            delayMS = 10
-            provider.DoubleSpeed = True
+            provider.UseNTSC = True
         Else
-            delayMS = 20
-            provider.DoubleSpeed = False
+            provider.UseNTSC = False
         End If
-        waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 8)
-        ' zero out ram
-        For i = 0 To &HFFFF
-            mem(i) = 0
-        Next
-        ' Load SID file data into memory
-        For i = 0 To sidfile.Data.Length - 1
-            mem(sidfile.LoadAddress + i) = sidfile.Data(i)
-        Next
-        ' Map SID writes
-        For i = &HD400 To &HD41F ' 54272 to 54303
-            mem.MapWriter(i, Sub(addr As UShort, value As Byte)
-                                 sid.WriteRegister(addr, value)
-                             End Sub)
-        Next
-        ' zero out SID
-        For i = 0 To &H1F
-            sid.WriteRegister(&HD400 + i, 0)
-        Next
+        waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
         ' Run init routine
-        Dim initTimer = Stopwatch.StartNew
-        While True
-            Dim state = cpu.ExecuteOneInstruction(mem)
-            If state.LastInstructionExecResult.OpCodeByte = &H60 Then
-                Exit While
-            End If
-            If state.LastInstructionExecResult.OpCodeByte = &H0 Then
-                MsgBox("BRK encountered")
-                Exit While
-            End If
-            If initTimer.Elapsed.TotalSeconds > 10 Then
-                MsgBox("Init stuck!")
-                Exit While
-            End If
-        End While
         ' Start background audio pumping
-        If initTimer.Elapsed.TotalSeconds <= 10 Then
-            initTimer.Stop()
-            BackgroundWorker1.RunWorkerAsync()
-        End If
+        'If initTimer.Elapsed.TotalSeconds <= 10 Then
+        '    initTimer.Stop()
+        'BackgroundWorker1.RunWorkerAsync()
+        'End If
+        provider.sidfile = sidfile
+        provider.InitSIDFile()
         waveOut.Init(provider)
         waveOut.Play()
+        provider.runCPU = True
+    End Sub
+    Public Sub pr(str As String)
+        Console.WriteLine(str)
     End Sub
     Private Sub OpenFileDialog1_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog1.FileOk
         ' if this dies im blaming chatgp
@@ -148,20 +123,11 @@ Public Class Form1
         Dim watch As New Stopwatch
         While Not e.Cancel
             watch.Start()
-            For Each v In sid.Voices
-                If v.pendingNoteOn Then
-                    v.NoteOn(sid.currentTime)
-                    v.pendingNoteOn = False
-                End If
-                If v.pendingNoteOff Then
-                    v.NoteOff(sid.currentTime) ' this will never wo-
-                    v.pendingNoteOff = False
-                End If
-            Next
             cpu.PC = sidfile.PlayAddress
             Dim cycCount = 0
             While True
                 Dim state = cpu.ExecuteOneInstruction(mem)
+                'Console.WriteLine($"{state.LastInstructionExecResult.OpCodeByte.ToString("X2")} {mem(state.PCBeforeLastOpCodeExecuted + 1).ToString("X2")} {mem(state.PCBeforeLastOpCodeExecuted + 2).ToString("X2")} {mem(state.PCBeforeLastOpCodeExecuted + 3).ToString("X2")} at {state.PCBeforeLastOpCodeExecuted.ToString()}")
                 cycCount += state.CyclesConsumed
                 If cycCount >= 19709 Or watch.ElapsedMilliseconds >= delayMS Then
                     Exit While
@@ -228,36 +194,71 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub CheckBox5_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox5.CheckedChanged
         If CheckBox5.Checked Then
-            delayMS = 10
-            provider.DoubleSpeed = True
+            provider.UseNTSC = True
         Else
-            delayMS = 20
-            provider.DoubleSpeed = False
+            provider.UseNTSC = False
         End If
     End Sub
 
     Private Sub NumericUpDown2_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged
-        sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+        If sid IsNot Nothing Then
+
+            sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+        End If
     End Sub
 
     Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown3.ValueChanged
-        sid.Filter.CutoffBias = NumericUpDown3.Value
+        If sid IsNot Nothing Then
+            sid.Filter.CutoffBias = NumericUpDown3.Value
+        End If
+
     End Sub
 
     Private Sub NumericUpDown4_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown4.ValueChanged
-        sid.Filter.ResonanceDivider = NumericUpDown4.Value
+        If sid IsNot Nothing Then
+            sid.Filter.ResonanceDivider = NumericUpDown4.Value
+        End If
     End Sub
 
     Private Sub CheckBox6_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox6.CheckedChanged
-        If CheckBox6.Checked Then
-            sid.Filter.Mode6581 = True
-            sid.Filter.CutoffMultiplier = 2
-            sid.Filter.CutoffBias = 425
-            sid.Filter.ResonanceDivider = 4
-            sid.Filter.Reset()
-        Else
-            sid.Filter.Mode6581 = False
-            sid.Filter.Reset()
+        If sid IsNot Nothing Then
+            If CheckBox6.Checked Then
+                sid.Filter.Mode6581 = True
+                'sid.Filter.CutoffMultiplier = 2
+                'sid.Filter.CutoffBias = 425
+                'sid.Filter.ResonanceDivider = 4
+                sid.Filter.CutoffMultiplier = 2
+                sid.Filter.CutoffBias = 0
+                sid.Filter.ResonanceDivider = 2
+                sid.Filter.Reset()
+            Else
+                sid.Filter.Mode6581 = False
+                sid.Filter.Reset()
+            End If
+        End If
+    End Sub
+
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    End Sub
+
+    Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        Using fs As New FileStream("ramdump.bin", FileMode.Create, FileAccess.Write)
+            For i = 0 To 65535
+                fs.WriteByte(mem(i))
+            Next
+        End Using
+        'provider.sid.Filter.fs.Dispose()
+    End Sub
+
+    Private Sub CheckBox7_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox7.CheckedChanged
+        If sid IsNot Nothing Then
+            sid.bypassFilter = CheckBox7.Checked
+        End If
+    End Sub
+
+    Private Sub RadioButton1_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton1.CheckedChanged
+        If sid IsNot Nothing Then
+            sid.VolumeRegisterSampleMode = RadioButton1.Checked
         End If
     End Sub
 End Class

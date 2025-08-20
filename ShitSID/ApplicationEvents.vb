@@ -1,4 +1,4 @@
-﻿Imports Microsoft.VisualBasic.ApplicationServices
+﻿Imports System.Runtime.InteropServices
 
 Namespace My
     ' The following events are available for MyApplication:
@@ -24,6 +24,12 @@ Namespace My
     ' End Sub
 
     Partial Friend Class MyApplication
-
+        <DllImport("kernel32.dll")>
+        Private Shared Function AllocConsole() As Boolean
+        End Function
+        Public Sub ShitSID_Startup() Handles Me.Startup
+            AllocConsole()
+            Console.WriteLine("ShitSID version Dev - (C) linuxuser2064")
+        End Sub
     End Class
 End Namespace

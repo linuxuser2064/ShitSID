@@ -1,4 +1,4 @@
-﻿Imports System.Timers
+﻿Imports Highbyte.DotNet6502.Instructions
 
 Public Class ShitSID
     Public Filter As New SIDFilter(44100)
@@ -8,6 +8,10 @@ Public Class ShitSID
     Public filterCutoffHi As Integer = 0
     Public filterResonance As Integer = 0
     Public filterMode As Integer = 0 ' 0-7 (bit flags)
+    Public bypassFilter As Boolean = False
+    Public VolumeRegisterSampleMode As Boolean = True
+    Public VolumeRegister As Byte
+    Public MuteVoice3 As Boolean = False
     Const ClocksPerFrame = 985248.0
     Public Sub New()
         For i As Integer = 0 To 2
@@ -16,15 +20,35 @@ Public Class ShitSID
     End Sub
     Public Sub Clock()
         currentTime += 1.0 / ClocksPerFrame
+        For i = 0 To 2
+            Voices(i).Envelope.Clock()
+        Next
     End Sub
 
     Public Function GetSample() As Double
         Dim output As Double = 0
-        For Each v In Voices
-            output += v.Generate(currentTime)
+        Dim filterInput As Double = 0
+        For i = 0 To 2
+            Dim v = Voices(i)
+            If v.UseFilter AndAlso bypassFilter = False Then
+                filterInput += v.Generate(currentTime)
+            Else
+                If MuteVoice3 AndAlso i = 2 Then
+                Else
+                    output += v.Generate(currentTime)
+                End If
+            End If
         Next
-        'Return Math.Max(-1, Math.Min(1, output))
-        Return output / 3
+        If Not bypassFilter Then
+            output += Filter.ApplyFilter(filterInput)
+        End If
+        If VolumeRegisterSampleMode Then
+            output += (VolumeRegister - 15) / 4
+        Else
+            output *= VolumeRegister / 15.0
+            output += (VolumeRegister - 15) / 4
+        End If
+        Return output / 4
     End Function
 
 
@@ -57,6 +81,8 @@ Public Class ShitSID
                 If bits(4) Then filterMode += SIDFilter.EFilterType.LowPass
                 If bits(5) Then filterMode += SIDFilter.EFilterType.BandPass
                 If bits(6) Then filterMode += SIDFilter.EFilterType.HighPass
+                MuteVoice3 = bits(7)
+                VolumeRegister = value And &HF
                 UpdateFilterSettings()
                 Return
         End Select
@@ -66,6 +92,7 @@ Public Class ShitSID
         If voiceNum > 2 Then Return
         Dim voice = Voices(voiceNum)
         Dim subReg = reg Mod 7
+        Dim out = ""
         Select Case subReg
             Case 0 ' FREQ LO
                 voice.FreqLo = value
@@ -82,14 +109,7 @@ Public Class ShitSID
             Case 4 ' CONTROL REG
                 voice.Control = value
                 Dim bits As New BitArray({value})
-                If bits(0) = True AndAlso voice.lastGateVal = False Then
-                    voice.NoteOn(currentTime)
-                    voice.Envelope.GetLevel(currentTime) ' Force level evaluation now
-                ElseIf bits(0) = False AndAlso voice.lastGateVal = True Then
-                    voice.NoteOff(currentTime)
-                    voice.Envelope.GetLevel(currentTime) ' Force level evaluation now
-                End If
-                voice.lastGateVal = bits(0)
+                voice.Envelope.WriteControlReg(value)
                 If bits(4) AndAlso bits(5) Then
                     voice.Waveform = "tri+saw"
                 ElseIf bits(4) AndAlso bits(6) Then
@@ -108,11 +128,9 @@ Public Class ShitSID
                     voice.Waveform = "none" ' No audio
                 End If
             Case 5 ' ATTACK/DECAY
-                voice.Envelope.Attack = (value >> 4) And &HF
-                voice.Envelope.Decay = value And &HF
+                voice.Envelope.WriteAttackDecay(value)
             Case 6 ' SUSTAIN/RELEASE
-                voice.Envelope.Sustain = (value >> 4) And &HF
-                voice.Envelope.Release = value And &HF
+                voice.Envelope.WriteSustainRelease(value)
         End Select
     End Sub
     Private Sub UpdateFilterSettings()
@@ -132,8 +150,6 @@ Public Class ShitSID
     End Sub
 End Class
 Public Class Voice
-    Public pendingNoteOn As Boolean = False
-    Public pendingNoteOff As Boolean = False
     Public MuteVoice As Boolean = False
     Public LoFiDuty As Boolean = False
     Public lastGateVal = False
@@ -143,18 +159,18 @@ Public Class Voice
     Public Control As Byte
     Public Waveform As String = "square"
     Public DutyCycle As Double = 0.5
-    Public Envelope As New ADSR()
+    Public Envelope As New EnvelopeGenerator()
     Public PulseWidthLo As Byte = 0
     Public PulseWidthHi As Byte = 0
     Public UseFilter As Boolean = False
+    Private lastNoiseUpdate As Double = 0
+    Public currentNoise As Double = 0
+    Private lastGateToggleTime As Double = -1.0 '''
     Private Index As Int32
     Private Parent As ShitSID
     Private phase As Double = 0.0
     Private lastTime As Double = 0.0
     Private prevMasterMSB As Boolean = False
-    Private lastNoiseUpdate As Double = 0
-    Private currentNoise As Double = 0
-    Private lastGateToggleTime As Double = -1.0 '''
     Public Sub New(parent As ShitSID, i As Int32)
         Me.Parent = parent
         Me.Index = i
@@ -177,54 +193,65 @@ Public Class Voice
         Frequency = freqVal * 985248.0 / 16777216.0
     End Sub
 
-    Public Sub NoteOn(currentTime As Double)
-        Envelope.NoteOn(currentTime)
-    End Sub
-    Private Sub SafeSleep(ms As Int32, exec As [Delegate])
-        Dim newT As New Timer(ms)
-        AddHandler newT.Elapsed, Sub()
-                                     newT.Dispose()
-                                     exec.DynamicInvoke()
-                                 End Sub
-    End Sub
-    Public Sub NoteOff(currentTime As Double)
-        Envelope.NoteOff(currentTime)
-    End Sub
+    'Public Sub NoteOn(currentTime As Double)
+    '    Envelope.NoteOn()
+    'End Sub
+    'Public Sub NoteOff(currentTime As Double)
+    '    Envelope.NoteOff()
+    'End Sub
+    ' Add these fields to your Voice class
     Public Function Generate(time As Double) As Double
         Dim deltaTime As Double = time - lastTime
         lastTime = time
         Dim wave As Double
+
         If (Control And &H8) <> 0 Then ' test bit
-            Envelope.attackStartLevel = 0
-            Return Envelope.GetLevel(time)
+            Return Envelope.Output / 255.0
         End If
         If MuteVoice Then Return 0
-        ' source voices
-        Dim sourceIndex As Integer = (Me.Index + 2) Mod 3 ' mod because the order
+
+        ' sync/ringmod stuff
+        Dim sourceIndex As Integer = (Me.Index + 2) Mod 3
         Dim sourceVoice = Me.Parent.Voices(sourceIndex)
-        Dim oldSourcePhase As Double = sourceVoice.phase
+
         ' phase accumulator
         phase += Frequency * deltaTime
         phase = phase Mod 1.0
-        ' osc sync
-        Dim masterVoice As Voice = Me.Parent.Voices(sourceIndex) 'aaaaaas
+
+        '  hardsync
+        Dim masterVoice As Voice = Me.Parent.Voices(sourceIndex)
         Dim masterPhaseMSB As Boolean = (masterVoice.phase >= 0.5)
         If (Control And &H2) <> 0 Then
             If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
-                Me.phase = 0.0 ' phase reset
+                Me.phase = 0.0
             End If
         End If
         prevMasterMSB = masterPhaseMSB
-        Dim envLevel = Envelope.GetLevel(time)
-        If envLevel <= 0 AndAlso Envelope.IsIdle() Then Return 0
+
+        Dim envLevel = Envelope.Output / 255.0
+        'If envLevel <= 0 AndAlso Envelope.IsIdle() Then Return 0
+
+        ' new 12 bit accumulator
+        Dim acc As Integer = CInt(phase * &HFFF) ' 3 nybbles looks cursed
+
+        ' sid accurate waveform generation
+        Dim sawVal As Integer = acc
+        Dim triVal As Integer = (acc << 1) And &HFFF
+        If (acc And &H800) <> 0 Then ' MSB is bit 11
+            triVal = triVal Xor &HFFF
+        End If
+        Dim pulseVal As Integer = If(acc < DutyCycle * &HFFF, &HFFF, 0)
+
+        Dim dacInput As Integer = 0
         Select Case Waveform
             Case "saw"
-                wave = 2 * phase - 1
+                dacInput = sawVal
             Case "tri"
-                wave = 1.0 - 4 * Math.Abs(phase - 0.5)
+                dacInput = triVal
             Case "square"
-                wave = If(phase < DutyCycle, 1, -1)
+                dacInput = pulseVal
             Case "noise"
+                ' still float noise
                 Dim cycleDuration As Double = 1.0 / Frequency
                 Dim interval As Double = cycleDuration / 16.0
                 If time - lastNoiseUpdate >= interval Then
@@ -234,135 +261,267 @@ Public Class Voice
                 End If
                 wave = currentNoise
             Case "tri+saw"
-                wave = (1.0 - 4 * Math.Abs(phase - 0.5)) Xor (2 * phase - 1)
+                dacInput = triVal Or sawVal
             Case "tri+pulse"
-                wave = (1.0 - 4 * Math.Abs(phase - 0.5)) * If(phase < DutyCycle, 1, -1)
+                dacInput = If(acc < DutyCycle * &HFFF, &HFFF, TriPulseWF(acc) * 16)
             Case "saw+pulse"
-                wave = (2 * phase - 1) * If(phase < DutyCycle, 1, -1)
+                dacInput = sawVal And pulseVal
             Case Else
-                wave = 0
+                dacInput = 0
         End Select
+
+        ' if not noise then 12-bit -> float
+        If Waveform <> "noise" Then
+            ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
+            wave = (dacInput / &HFFF) * 2.0 - 1.0
+        End If
 
         ' xor ringmod
         If (Control And &H4) <> 0 Then
             Dim modulator As Double = 1.0 - 4 * Math.Abs(sourceVoice.phase - 0.5)
             wave *= If(modulator > 0, 1, -1)
         End If
-        If UseFilter Then
-            Return Parent.Filter.ApplyFilter(wave * envLevel)
-        End If
         Return wave * envLevel
     End Function
 End Class
+Public Class EnvelopeGenerator
 
-Public Class ADSR
-    Public Attack As Integer = 0 ' 0–15
-    Public Decay As Integer = 0 ' 0–15
-    Public Sustain As Double = 15 ' 0-15
-    Public Release As Integer = 0 ' 0–15
-    Public releaseStartLevel As Double = 0
-    Public state As String = "idle"
-    Public level As Double = 0
-    Public startTime As Double = 0
-    Public decayStartLevel As Double
-    Public attackStartLevel As Double = 0
-    Private delayTicks As Double = 1.0 / 985248.0 ' Delay by one tick
-    Public DelayAttackForBug As Boolean = False
-    Public Overrides Function ToString() As String
-        Return $"A:{Attack} D:{Decay} S:{Sustain} R:{Release}, State: {state}, Level: {(CInt(level * 10) / 10).ToString}"
-    End Function
-    Private Sub SafeSleep(ms As Int32, exec As [Delegate])
-        Dim newT As New Timer(ms)
-        AddHandler newT.Elapsed, Sub()
-                                     newT.Dispose()
-                                     exec.DynamicInvoke()
-                                 End Sub
+    ' this is a conversion from the reSIDfp EnvelopeGenerator class
+    ' credit them, not me
+    ' Copyright 2011-2020 Leandro Nini <drfiemost@users.sourceforge.net>
+    ' Copyright 2018 VICE Project
+    ' Copyright 2007-2010 Antti Lankila
+    ' Copyright 2004,2010 Dag Lem <resid@nimrod.no>
+
+    ' --- SID ADSR State ---
+    Public Enum EState
+        Attack
+        DecaySustain
+        Release
+    End Enum
+
+    Private Shared ReadOnly adsrTable As UInteger() = {
+        &H7F, &H3000, &H1E00, &H660,
+        &H182, &H5573, &HE, &H3805,
+        &H2424, &H2220, &H90C, &HECD,
+        &H10E, &H23F7, &H5237, &H64A8
+    }
+
+    Public Attack As Byte
+    Public Decay As Byte
+    Public Sustain As Byte
+    Public Release As Byte
+
+    Private gate As Boolean
+    Private resetLfsr As Boolean
+    Private lfsr As UInteger = &H7FFF
+    Private rate As UInteger
+    Private exponentialCounter As UInteger
+    Private exponentialCounterPeriod As UInteger = 1
+    Private newExponentialCounterPeriod As UInteger
+    Private statePipeline As Integer
+    Private envelopePipeline As Integer
+    Private exponentialPipeline As Integer
+    Private state As EState = EState.Release
+    Private nextState As EState = EState.Release
+    Private counterEnabled As Boolean = True
+    Private envelopeCounter As Byte = &HAA
+    Private env3 As Byte
+
+    Public Sub New()
+        Reset()
     End Sub
-    Private Function RateToTime(rate As Integer, stage As String) As Double
-        ' SID ADSR map
-        Dim attackTimes() As Double = {0.002, 0.008, 0.016, 0.024, 0.038, 0.056, 0.068, 0.08, 0.1, 0.25, 0.5, 0.8, 1.0, 3.0, 5.0, 8.0}
-        Dim decayReleaseTimes() As Double = {0.0064, 0.024, 0.048, 0.072, 0.114, 0.168, 0.204, 0.24, 0.3, 0.75, 1.5, 2.4, 3.0, 9.0, 15.0, 24.0}
-        rate = Math.Max(0, Math.Min(rate, 15))
-        Select Case stage
-            Case "attack"
-                Return attackTimes(rate)
-            Case "decay"
-                Dim dur = decayReleaseTimes(rate) * 0.98 ' 0.98 because PAL speed
-                Dim ε = 0.99 ' εεεεεεεεεε
-                Return -Math.Log(1 - ε) / dur
-            Case "release"
-                Dim dur = decayReleaseTimes(rate) * 0.985 ' 0.98 because PAL speed
-                Dim ε = 0.99 ' εεεεεεεεεε
-                Return -Math.Log(1 - ε) / dur
-            Case Else
-                Return 0.1
-        End Select
-    End Function
 
-    Public Function IsIdle() As Boolean
-        Return state = "idle"
-    End Function
+    Public Sub Reset()
+        envelopePipeline = 0
+        statePipeline = 0
+        exponentialPipeline = 0
 
-    'Public Sub NoteOn(currentTime As Double)
-    '    attackStartLevel = level ' Remember where we were
-    '    startTime = currentTime
-    '    state = "attack"
-    'End Sub
-    Public Sub NoteOn(currentTime As Double)
-        attackStartLevel = level
-        If DelayAttackForBug Then
-            ' Introduce a 1-frame delay
-            DelayAttackForBug = False ' Reset the flag
-            SafeSleep(20, Sub()
-                              startTime = currentTime
-                              state = "attack"
-                          End Sub)
-        Else
-            startTime = currentTime
-            state = "attack"
+        Attack = 0
+        Decay = 0
+        Sustain = 0
+        Release = 0
+
+        gate = False
+        resetLfsr = True
+        lfsr = &H7FFF
+        exponentialCounter = 0
+        exponentialCounterPeriod = 1
+        newExponentialCounterPeriod = 0
+        state = EState.Release
+        nextState = EState.Release
+        counterEnabled = True
+        rate = adsrTable(Release)
+    End Sub
+
+    Public Sub WriteControlReg(control As Byte)
+        Dim gateNext As Boolean = (control And &H1) <> 0
+
+        If gateNext <> gate Then
+            gate = gateNext
+
+            If gateNext Then
+                'attac
+                nextState = EState.Attack
+                statePipeline = 2
+                If resetLfsr OrElse envelopePipeline = 2 Then
+                    envelopePipeline = If(exponentialCounterPeriod = 1 OrElse envelopePipeline = 2, 2, 4)
+                ElseIf envelopePipeline = 1 Then
+                    statePipeline = 3
+                End If
+            Else
+                nextState = EState.Release
+                statePipeline = If(envelopePipeline > 0, 3, 2)
+            End If
         End If
     End Sub
-    Public Sub NoteOff(currentTime As Double)
-        releaseStartLevel = level
-        startTime = currentTime
-        state = "release"
+
+    ' --- Attack/Decay ---
+    Public Sub WriteAttackDecay(value As Byte)
+        Attack = (value >> 4) And &HF
+        Decay = value And &HF
+
+        If state = EState.Attack Then
+            rate = adsrTable(Attack)
+        ElseIf state = EState.DecaySustain Then
+            rate = adsrTable(Decay)
+        End If
     End Sub
 
-    Public Function GetLevel(currentTime As Double) As Double
-        Dim t As Double = currentTime - startTime - delayTicks ' Apply the delay
-        Select Case state
-            Case "attack"
-                Dim dur = RateToTime(Attack, "attack")
-                level = attackStartLevel + (1.0 - attackStartLevel) * (t / dur)
-                If level >= 1.0 Then
-                    level = 1.0
-                    state = "decay"
-                    startTime = currentTime
+    ' --- Sustain/Release ---
+    Public Sub WriteSustainRelease(value As Byte)
+        Sustain = (value And &HF0) Or ((value >> 4) And &HF)
+        Release = value And &HF
+
+        If state = EState.Release Then
+            rate = adsrTable(Release)
+        End If
+    End Sub
+
+    ' --- Clock the ADSR ---
+    Public Sub Clock()
+        env3 = envelopeCounter
+
+        ' Update exponential counter period if it changed
+        If newExponentialCounterPeriod > 0 Then
+            exponentialCounterPeriod = newExponentialCounterPeriod
+            newExponentialCounterPeriod = 0
+        End If
+
+        ' State change pipeline
+        If statePipeline > 0 Then
+            StateChange()
+        End If
+
+        ' Envelope pipeline
+        If envelopePipeline <> 0 Then
+            envelopePipeline -= 1
+            If envelopePipeline = 0 AndAlso counterEnabled Then
+                Select Case state
+                    Case EState.Attack
+                        envelopeCounter = CByte(Math.Min(255, envelopeCounter + 1))
+                        If envelopeCounter = 255 Then
+                            nextState = EState.DecaySustain
+                            statePipeline = 3
+                        End If
+                    Case EState.DecaySustain, EState.Release
+                        envelopeCounter = CByte(Math.Max(0, envelopeCounter - 1))
+                        If envelopeCounter = 0 Then counterEnabled = False
+                End Select
+                SetExponentialCounter()
+            End If
+            Return
+        End If
+
+        ' Exponential pipeline
+        If exponentialPipeline <> 0 Then
+            exponentialPipeline -= 1
+            If exponentialPipeline = 0 Then
+                exponentialCounter = 0
+                If (state = EState.DecaySustain AndAlso envelopeCounter <> Sustain) OrElse state = EState.Release Then
+                    envelopePipeline = 1
                 End If
-            Case "decay"
-                Dim k = RateToTime(Decay, "decay")
-                Dim target = Sustain / 15.0
-                level = target + (1.0 - target) * Math.Exp(-k * t)
-                If level <= target + 0.001 Then ' close enough
-                    level = target
-                    state = "sustain"
-                    startTime = currentTime
+            End If
+            Return
+        End If
+
+        ' Reset LFSR
+        If resetLfsr Then
+            lfsr = &H7FFF
+            resetLfsr = False
+
+            If state = EState.Attack Then
+                exponentialCounter = 0
+                envelopePipeline = 2
+            Else
+                If counterEnabled Then
+                    exponentialCounter += 1
+                    If exponentialCounter = exponentialCounterPeriod Then
+                        exponentialPipeline = If(exponentialCounterPeriod <> 1, 2, 1)
+                    End If
                 End If
-            Case "sustain"
-                level = Sustain / 15.0 ' Sustain phase is constant
-            Case "release"
-                Dim k = RateToTime(Release, "release")
-                Dim target = 0
-                level = releaseStartLevel * Math.Exp(-k * t)
-                If level <= target + 0.001 Then ' close enough
-                    level = target
-                    state = "idle"
+            End If
+        End If
+
+        ' LFSR clocking
+        If lfsr <> rate Then
+            Dim feedback As UInteger = ((lfsr << 14) Xor (lfsr << 13)) And &H4000
+            lfsr = (lfsr >> 1) Or feedback
+        Else
+            resetLfsr = True
+        End If
+    End Sub
+
+    ' --- State change ---
+    Private Sub StateChange()
+        statePipeline -= 1
+
+        Select Case nextState
+            Case EState.Attack
+                If statePipeline = 1 Then
+                    rate = adsrTable(Decay)
+                ElseIf statePipeline = 0 Then
+                    state = EState.Attack
+                    rate = adsrTable(Attack)
+                    counterEnabled = True
                 End If
-            Case Else
-                level = 0
+            Case EState.DecaySustain
+                If statePipeline = 0 Then
+                    state = EState.DecaySustain
+                    rate = adsrTable(Decay)
+                End If
+            Case EState.Release
+                If (state = EState.Attack AndAlso statePipeline = 0) _
+                    OrElse (state = EState.DecaySustain AndAlso statePipeline = 1) Then
+                    state = EState.Release
+                    rate = adsrTable(Release)
+                End If
         End Select
-        Return level
+    End Sub
+
+    ' --- Exponential counter ---
+    Private Sub SetExponentialCounter()
+        Select Case envelopeCounter
+            Case &HFF, &H0
+                newExponentialCounterPeriod = 1
+            Case &H5D
+                newExponentialCounterPeriod = 2
+            Case &H36
+                newExponentialCounterPeriod = 4
+            Case &H1A
+                newExponentialCounterPeriod = 8
+            Case &HE
+                newExponentialCounterPeriod = 16
+            Case &H6
+                newExponentialCounterPeriod = 30
+        End Select
+    End Sub
+
+    ' --- Read current output ---
+    Public Function Output() As Byte
+        Return env3
     End Function
+
 End Class
 Public Class SIDFilter
     <Flags>
@@ -380,38 +539,9 @@ Public Class SIDFilter
     Private bandpass As Double = 0.0
     Private lowpass As Double = 0.0
     Private highpass As Double = 0.0
-    Public CutoffMultiplier As Double = 1.67
+    Public CutoffMultiplier As Double = 1
     Public CutoffBias As Int32 = 0
-    Public ResonanceDivider As Double = 3
-    ' approx filter curve
-    Private ReadOnly cutoffCurve As New List(Of Tuple(Of Integer, Double)) From {
-        Tuple.Create(0, 200.0),
-        Tuple.Create(250, 1600.0),
-        Tuple.Create(900, 6000.0),
-        Tuple.Create(1000, 7000.0),
-        Tuple.Create(1250, 8100.0),
-        Tuple.Create(1500, 10000.0),
-        Tuple.Create(1750, 12500.0),
-        Tuple.Create(2000, 13500.0),
-        Tuple.Create(2047, 13900.0)
-    }
-    Private ReadOnly CutoffCurve6581 As New List(Of Tuple(Of Integer, Double)) From {
-        Tuple.Create(0, 220.0),
-Tuple.Create(250, 250.0),
-Tuple.Create(490, 425.0),
-Tuple.Create(495, 400.0),
-Tuple.Create(740, 1450.0),
-Tuple.Create(745, 1400.0),
-Tuple.Create(825, 3250.0),
-Tuple.Create(1000, 6000.0),
-Tuple.Create(1020, 6030.0),
-Tuple.Create(1025, 4200.0),
-Tuple.Create(1250, 12000.0),
-Tuple.Create(1500, 16000.0),
-Tuple.Create(1750, 17500.0),
-Tuple.Create(2000, 18000.0),
-Tuple.Create(2047, 18000.0)
-    }
+    Public ResonanceDivider As Double = 1
     Public Sub New(Optional sampleRate As Double = 44100.0)
         Me.sampleRate = sampleRate
     End Sub
@@ -433,144 +563,54 @@ Tuple.Create(2047, 18000.0)
     End Sub
 
     Private Function InterpolatedCutoff() As Double
-        ' clamp just in case
-        cutoffVal = Math.Clamp(cutoffVal, 0, 2047)
-        ' interpolation of cutoffVal to actual freq
         If Mode6581 Then
-            For i As Integer = 0 To CutoffCurve6581.Count - 2
-                Dim x0 = CutoffCurve6581(i).Item1
-                Dim y0 = CutoffCurve6581(i).Item2
-                Dim x1 = CutoffCurve6581(i + 1).Item1
-                Dim y1 = CutoffCurve6581(i + 1).Item2
-
-                If cutoffVal >= x0 AndAlso cutoffVal <= x1 Then
-                    Dim t = (cutoffVal - x0) / (x1 - x0)
-                    Return (y0 + t * (y1 - y0)) + CutoffBias ' it does not work
-                End If
-            Next
-            ' out of bounds management
-            Return CutoffCurve6581.Last().Item2 + CutoffBias
+            Return cutoffCurve6581(cutoffVal).Item2 + CutoffBias
         Else
-            For i As Integer = 0 To cutoffCurve.Count - 2
-                Dim x0 = cutoffCurve(i).Item1
-                Dim y0 = cutoffCurve(i).Item2
-                Dim x1 = cutoffCurve(i + 1).Item1
-                Dim y1 = cutoffCurve(i + 1).Item2
-
-                If cutoffVal >= x0 AndAlso cutoffVal <= x1 Then
-                    Dim t = (cutoffVal - x0) / (x1 - x0)
-                    Return (y0 + t * (y1 - y0)) + CutoffBias ' it does not work
-                End If
-            Next
-            ' out of bounds management
-            Return cutoffCurve.Last().Item2 + CutoffBias
+            Return cutoffCurve8580(cutoffVal).Item2 + CutoffBias
         End If
     End Function
-
-    Public Function ApplyFilter2(input As Double) As Double
-        Dim baseResonance As Double = resonance / ResonanceDivider
-        Dim f As Double = CutoffMultiplier * Math.Sin(Math.PI * InterpolatedCutoff() / sampleRate)
-
-        ' Introduce component variability
-        If Mode6581 Then
-            f *= 1.0 + (Rnd() - 0.5) * 0.02
-        End If
-
-        ' Apply non-linear amplifier behavior
-        If Mode6581 Then
-            Dim preGain As Double = (1.0 - (cutoffVal / 2047.0)) * 8.0
-            input += Math.Tanh(input * preGain) * 0.6
-        End If
-
-        ' State-variable filter processing
-        Dim hp As Double = input - lowpass - baseResonance * bandpass
-        If Mode6581 Then
-            ' Asymmetric clipping
-            hp += Math.Sin(hp * 3.0) * 0.2
-            hp = Math.Tanh(hp * 1.5)
-        End If
-        hp *= 0.67
-
-        Dim bp As Double = bandpass + f * hp
-        If Mode6581 Then
-            ' Clamp to simulate hardware limitations
-            bp = Math.Clamp(bp, -0.9, 1.5)
-        End If
-
-        Dim lp As Double = lowpass + f * bp
-
-        ' Update filter states
-        highpass = hp
-        bandpass = bp
-        lowpass = lp
-
-        ' Combine outputs based on filter type
-        Dim output As Double = 0.0
-        If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
-        If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
-        If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
-
-        ' Apply final asymmetric distortion
-        If Mode6581 Then
-            Dim asymBias As Double = 0.5
-            output += Math.Tanh(output + asymBias) * 0.2
-            output -= Math.Tanh(output - asymBias) * 0.2
-        End If
-
-        Return output
-    End Function
+    Public distortionOffset As Double = -0.4
+    Public distortionMult As Double = 1
+    Public LastInput As Double = 0
+    'Public fs As New FileStream("filterlog.txt", FileMode.Create)
     Public Function ApplyFilter(input As Double) As Double
+        ' Calculate cutoff frequency and resonance
         Dim freq = InterpolatedCutoff()
-        Dim f As Double = CutoffMultiplier * Math.Sin(Math.PI * freq / sampleRate)
-        ' Introduce component variability
-        If Mode6581 Then
-            f *= 1.0 + (Rnd() - 0.5) * 0.02
-        End If
-        ' resonance managment
-        Dim adjustedResonance As Double = resonance * (1 - (freq / 18000))
-        Dim q As Double = 1.0 - (adjustedResonance / ResonanceDivider)
+        'fs.Write(Encoding.UTF8.GetBytes(freq.ToString & vbCrLf))
+        freq = Math.Clamp(freq, 1, sampleRate / 2 - 1)
 
-        ' distortion🔥🔥🔥🔥
-        Dim cutoffFactor As Double = 1.0 - (cutoffVal / 2047.0)
-        Dim distortedInput As Double = input + Math.Tanh(input * cutoffFactor * 8.0) * cutoffFactor * 0.3
-        If Mode6581 Then
-            input = distortedInput
-        End If
-        ' svf filter
+        ' f: frequency coefficient, q: resonance damping
+        Dim f As Double = 2 * Math.Sin(Math.PI * freq / sampleRate)
+        f = Math.Max(f, 0.0001)
+        Dim q As Double = 1.0 - (resonance / ResonanceDivider)
+        q = Math.Clamp(q, 0.01, 0.99)
+
+        ' Standard SVF structure
         Dim hp As Double = input - lowpass - q * bandpass
-        If Mode6581 Then
-            ' Asymmetric clipping
-            hp += 0.5
-            hp = Math.Tanh(hp * 1)
-            hp -= 0.5
-        End If
-        hp *= 0.67 'damp
-        If (filterType And EFilterType.BandPass) <> 0 AndAlso Mode6581 Then
-            hp = Math.Clamp(hp, -0.7, 2) ' crust
-        End If
         Dim bp As Double = bandpass + f * hp
-        If Mode6581 Then
-            ' Clamp to simulate hardware limitations
-            bp = Math.Clamp(bp, -0.9, 1.5)
-        End If
         Dim lp As Double = lowpass + f * bp
-        highpass = hp
-        bandpass = bp
-        lowpass = lp
 
-        ' output
+        ' Store state for next iteration
+        highpass = hp
+        highpass = Math.Clamp(highpass, -2, 2)
+        bandpass = bp
+        bandpass = Math.Clamp(bandpass, -2, 2)
+        lowpass = lp
+        lowpass = Math.Clamp(lowpass, -2, 2)
+
+
+        ' Output based on selected filter mode
         Dim output As Double = 0.0
         If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
         If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
         If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
-        ' Apply final asymmetric distortion
         If Mode6581 Then
-            Dim asymBias As Double = 1
-            output += Math.Tanh(output + asymBias) * 0.2
-            output -= Math.Tanh(output - asymBias) * 0.2
+            output = (Math.Tanh((output * distortionMult) + distortionOffset) - distortionOffset) / distortionMult
         End If
+
         Return output
     End Function
+
     Public Sub Reset()
         bandpass = 0
         lowpass = 0
