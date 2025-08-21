@@ -190,6 +190,7 @@ Public Class Voice
     Private Index As Int32
     Private Parent As ShitSID
     Private phase As Double = 0.0
+    Public accum As Short = 0
     Private lastTime As Double = 0.0
     Private prevMasterMSB As Boolean = False
     Public Sub New(parent As ShitSID, i As Int32)
@@ -239,22 +240,13 @@ Public Class Voice
         phase += Frequency * deltaTime
         phase = phase Mod 1.0
 
-        '  hardsync
-        Dim masterVoice As Voice = Me.Parent.Voices(sourceIndex)
-        Dim masterPhaseMSB As Boolean = (masterVoice.phase >= 0.5)
-        If (Control And &H2) <> 0 Then
-            If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
-                Me.phase = 0.0
-            End If
-        End If
-        prevMasterMSB = masterPhaseMSB
+
 
         Dim envLevel = Envelope.Output / 255.0
         'If envLevel <= 0 AndAlso Envelope.IsIdle() Then Return 0
 
         ' new 12 bit accumulator
         Dim acc As Integer = CInt(phase * &HFFF) ' 3 nybbles looks cursed
-
         ' sid accurate waveform generation
         Dim sawVal As Integer = acc
         Dim triVal As Integer = (acc << 1) And &HFFF
@@ -290,18 +282,32 @@ Public Class Voice
             Case Else
                 dacInput = 0
         End Select
-
+        ' xor ringmod
+        If Waveform = "tri" AndAlso (Control And &H4) Then
+            If sourceVoice.phase >= 0.5 Then
+                dacInput = -dacInput
+            End If
+        End If
+        If Waveform = "tri+pulse" AndAlso (Control And &H4) Then
+            If sourceVoice.phase >= 0.5 Then
+                dacInput *= 0
+            End If
+        End If
         ' if not noise then 12-bit -> float
         If Waveform <> "noise" Then
             ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
             wave = (dacInput / &HFFF) * 2.0 - 1.0
         End If
 
-        ' xor ringmod
-        If (Control And &H4) <> 0 Then
-            Dim modulator As Double = 1.0 - 4 * Math.Abs(sourceVoice.phase - 0.5)
-            wave *= If(modulator > 0, 1, -1)
+        '  hardsync
+        Dim masterVoice As Voice = Me.Parent.Voices(sourceIndex)
+        Dim masterPhaseMSB As Boolean = (masterVoice.phase >= 0.5)
+        If (Control And &H2) <> 0 Then
+            If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
+                Me.phase = 0.0
+            End If
         End If
+        prevMasterMSB = masterPhaseMSB
         Return wave * envLevel
     End Function
 End Class
