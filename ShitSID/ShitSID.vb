@@ -6,21 +6,29 @@ Public Class ShitSID
         Average
         Bright
     End Enum
+    Public Voices(2) As Voice
+
     Public SampleRate As Int32 = 44100
+    Public CurrentTime As Double = 0
+
     Public Filter As SIDFilter
     Public FilterCurve As FilterCurveType = FilterCurveType.Average
-    Public Voices(2) As Voice
-    Public currentTime As Double = 0
-    Public filterCutoffLo As Integer = 0
-    Public filterCutoffHi As Integer = 0
-    Public filterResonance As Integer = 0
-    Public filterMode As Integer = 0 ' 0-7 (bit flags)
-    Public bypassFilter As Boolean = False
+
+
+    Public FilterCutoffLo As Integer = 0
+    Public FilterCutoffHi As Integer = 0
+    Public FilterResonance As Integer = 0
+    Public FilterMode As Integer = 0 ' 0-7 (bit flags)
+    Public BypassFilter As Boolean = False
+
     Public VolumeSampleMode As Boolean = True
     Public VolumeRegister As Byte
-    Public MuteVoice3 As Boolean = False
-    Public InternalAudioFilter As Boolean = True
     Public MuteSamples As Boolean = False
+
+    Public MuteVoice3 As Boolean = False
+
+    Public InternalAudioFilter As Boolean = True
+
     Const ClocksPerFrame = 985248.0
     Public Sub New(Optional samplerate As Int32 = 44100)
         Me.SampleRate = samplerate
@@ -192,17 +200,15 @@ Public Class Voice
     Public Control As Byte
     Public Waveform As String = "square"
     Public DutyCycle As Double = 0.5
-    Public Envelope As New EnvelopeGenerator()
     Public PulseWidthLo As Byte = 0
     Public PulseWidthHi As Byte = 0
     Public UseFilter As Boolean = False
+    Public Envelope As New EnvelopeGenerator()
     Private lastNoiseUpdate As Double = 0
-    Public currentNoise As Double = 0
-    Private lastGateToggleTime As Double = -1.0 '''
+    Private currentNoise As Double = 0
     Private Index As Int32
     Private Parent As ShitSID
     Private phase As Double = 0.0
-    Public accum As Short = 0
     Private lastTime As Double = 0.0
     Private prevMasterMSB As Boolean = False
     Public Sub New(parent As ShitSID, i As Int32)
@@ -227,14 +233,6 @@ Public Class Voice
         Frequency = freqVal * 985248.0 / 16777216.0
         'Frequency = Math.Round(Frequency / 10) * 10
     End Sub
-
-    'Public Sub NoteOn(currentTime As Double)
-    '    Envelope.NoteOn()
-    'End Sub
-    'Public Sub NoteOff(currentTime As Double)
-    '    Envelope.NoteOff()
-    'End Sub
-    ' Add these fields to your Voice class
     Public Function GenerateNoEnvelope(time As Double) As Double
         Dim deltaTime As Double = time - lastTime
         lastTime = time
@@ -287,7 +285,7 @@ Public Class Voice
             Case "tri+saw"
                 dacInput = triVal Or sawVal
             Case "tri+pulse"
-                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF(acc) * 16)
+                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
             Case "saw+pulse"
                 dacInput = sawVal And pulseVal
             Case Else
@@ -321,7 +319,7 @@ Public Class Voice
         prevMasterMSB = masterPhaseMSB
         Return wave
     End Function
-    Public rand As New Random()
+    Private rand As New Random()
     Public Function Generate(time As Double) As Double
         Dim deltaTime As Double = time - lastTime
         lastTime = time
@@ -373,12 +371,30 @@ Public Class Voice
                     currentNoise = rand.NextDouble() * 2 - 1
                 End If
                 wave = currentNoise
-            Case "tri+saw"
-                dacInput = triVal Or sawVal
+            Case "saw+tri"
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) * 16)
+                End If
             Case "tri+pulse"
-                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF(acc) * 16)
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) * 16)
+                End If
             Case "saw+pulse"
-                dacInput = sawVal And pulseVal
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) * 16)
+                End If
+            Case "saw+tri+pulse"
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
+                End If
             Case Else
                 dacInput = 0
         End Select
@@ -775,56 +791,6 @@ Public Class SIDFilter
             Return x - (x ^ 3) / 3
         End If
     End Function
-    'Public Function ApplyFilter(input As Double) As Double
-    '    ' === Base SVF ===
-    '    Dim freq = (InterpolatedCutoff() * CutoffMultiplier) + CutoffBias
-    '    freq = Math.Clamp(freq, 1, sampleRate / 2 - 1)
-
-    '    Dim f As Double = 2 * Math.Sin(Math.PI * freq / sampleRate)
-    '    f = Math.Max(f, 0.0001)
-    '    Dim q As Double = 1.0 - (resonance / ResonanceDivider)
-    '    q = Math.Clamp(q, 0.01, 0.99)
-
-    '    Dim hp As Double = input - lowpass - q * bandpass
-    '    Dim bp As Double = bandpass + f * hp
-    '    Dim lp As Double = lowpass + f * bp
-
-    '    highpass = hp
-    '    bandpass = bp
-    '    lowpass = lp
-
-    '    ' === Frequency bias (6581 analog coloration) ===
-    '    Dim biasHP As Double = 1.0
-    '    Dim biasBP As Double = 1.0
-    '    Dim biasLP As Double = 1.0
-
-    '    If Mode6581 Then
-    '        ' Normalized 0..1 frequency position
-    '        Dim normFreq As Double = freq / (sampleRate / 2)
-
-    '        ' Bias functions (tweakable)
-    '        ' HP droops with freq (simulate capacitance and FET leakage)
-    '        biasHP = 1.0 - 0.25 * normFreq
-
-    '        ' LP slightly rises with freq to compensate (inverse of HP droop)
-    '        biasLP = 1.0 + 0.1 * Math.Sin(normFreq * Math.PI * 0.5)
-
-    '        ' Optional U-shaped BP bias: stronger midrange
-    '        biasBP = 1.0 + 0.15 * Math.Sin(normFreq * Math.PI)
-    '    End If
-
-    '    Dim output As Double = 0.0
-    '    If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass * biasLP
-    '    If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass * biasBP
-    '    If (filterType And EFilterType.HighPass) <> 0 Then output += highpass * biasHP
-
-    '    ' === Distortion characteristic (6581 nonlinear FET) ===
-    '    If Mode6581 Then
-    '        output = (Math.Tanh((output * distortionMult) + distortionOffset) - distortionOffset) / distortionMult
-    '    End If
-
-    '    Return output
-    'End Function
     Public Sub Reset()
         bandpass = 0
         lowpass = 0

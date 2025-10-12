@@ -23,6 +23,7 @@ Partial Class Form1
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form1))
         Button1 = New Button()
         OpenFileDialog1 = New OpenFileDialog()
         CheckBox1 = New CheckBox()
@@ -222,9 +223,9 @@ Partial Class Form1
         RadioButton5.Enabled = False
         RadioButton5.Location = New Point(5, 152)
         RadioButton5.Name = "RadioButton5"
-        RadioButton5.Size = New Size(111, 19)
+        RadioButton5.Size = New Size(116, 19)
         RadioButton5.TabIndex = 12
-        RadioButton5.Text = "Light filter curve"
+        RadioButton5.Text = "Bright filter curve"
         RadioButton5.UseVisualStyleBackColor = True
         ' 
         ' RadioButton4
@@ -478,6 +479,7 @@ Partial Class Form1
         Controls.Add(CheckBox1)
         Controls.Add(Button1)
         FormBorderStyle = FormBorderStyle.Fixed3D
+        Icon = CType(resources.GetObject("$this.Icon"), Icon)
         MaximizeBox = False
         Name = "Form1"
         Text = "ShitSID"
