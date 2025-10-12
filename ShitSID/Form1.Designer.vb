@@ -405,7 +405,6 @@ Partial Class Form1
         GroupBox3.TabIndex = 18
         GroupBox3.TabStop = False
         GroupBox3.Text = "Export controls"
-        GroupBox3.Visible = False
         ' 
         ' Label3
         ' 

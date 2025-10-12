@@ -746,7 +746,7 @@ Public Class SIDFilter
             f *= 1.0 + modAmount
 
             ' 2. Asymmetric, amplitude-dependent distortion (more top than bottom)
-            Dim asym As Double = -0.5              ' negative = compress negative peaks more
+            Dim asym As Double = 0.5              ' negative = compress negative peaks more
             Dim drive As Double = 1.0               ' more drive for distortion
             Dim clipInput As Double = output * drive * (1 + If(output > 0, asym, -asym))
 
