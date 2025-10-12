@@ -21,7 +21,6 @@ A SID emulator written in Visual Basic.
 # Issues
 - Chris Hülsbeck's songs that use samples do not play.
 - Martin Galway's songs that use samples do not play.
-- Envelope initializes to full volume
 
 # Usage
 To load and play a .SID file, press "Load SID file".
