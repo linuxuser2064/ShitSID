@@ -282,12 +282,30 @@ Public Class Voice
                     currentNoise = rand.NextDouble() * 2 - 1
                 End If
                 wave = currentNoise
-            Case "tri+saw"
-                dacInput = triVal Or sawVal
+            Case "saw+tri"
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) * 16)
+                End If
             Case "tri+pulse"
-                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) * 16)
+                End If
             Case "saw+pulse"
-                dacInput = sawVal And pulseVal
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) * 16)
+                End If
+            Case "saw+tri+pulse"
+                If Parent.Filter.Mode6581 Then
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
+                Else
+                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
+                End If
             Case Else
                 dacInput = 0
         End Select
@@ -297,7 +315,7 @@ Public Class Voice
                 dacInput = 4095 - dacInput
             End If
         End If
-        If Waveform = "tri+pulse" AndAlso (Control And &H4) Then
+        If (Waveform = "saw+tri" Or Waveform = "tri+pulse" Or Waveform = "saw+pulse" Or Waveform = "saw+tri+pulse") AndAlso (Control And &H4) Then
             If sourceVoice.phase >= 0.5 Then
                 dacInput *= 0
             End If
@@ -404,7 +422,7 @@ Public Class Voice
                 dacInput = 4095 - dacInput
             End If
         End If
-        If Waveform = "tri+pulse" AndAlso (Control And &H4) Then
+        If (Waveform = "saw+tri" Or Waveform = "tri+pulse" Or Waveform = "saw+pulse" Or Waveform = "saw+tri+pulse") AndAlso (Control And &H4) Then
             If sourceVoice.phase >= 0.5 Then
                 dacInput *= 0
             End If
