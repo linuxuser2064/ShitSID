@@ -67,6 +67,9 @@ Public Class Form1
         sid.Filter.ResonanceDivider = NumericUpDown4.Value
         sid.bypassFilter = CheckBox7.Checked
         sid.VolumeSampleMode = RadioButton1.Checked
+        If RadioButton3.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Dark
+        If RadioButton4.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Average
+        If RadioButton5.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Bright
         CheckBox6_CheckedChanged(Nothing, Nothing)
         cpu.PC = sidfile.InitAddress
         Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
@@ -178,6 +181,9 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
                 sid.Filter.Reset()
             End If
         End If
+        RadioButton3.Enabled = CheckBox6.Checked
+        RadioButton4.Enabled = CheckBox6.Checked
+        RadioButton5.Enabled = CheckBox6.Checked
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -249,5 +255,19 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub CheckBox8_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox8.CheckedChanged
 
+    End Sub
+
+    Private Sub RadioButton5_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton5.CheckedChanged, RadioButton4.CheckedChanged, RadioButton3.CheckedChanged
+        If sid IsNot Nothing Then
+            If RadioButton3.Checked Then
+                sid.FilterCurve = ShitSID.FilterCurveType.Dark
+            End If
+            If RadioButton4.Checked Then
+                sid.FilterCurve = ShitSID.FilterCurveType.Average
+            End If
+            If RadioButton5.Checked Then
+                sid.FilterCurve = ShitSID.FilterCurveType.Bright
+            End If
+        End If
     End Sub
 End Class

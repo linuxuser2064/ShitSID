@@ -25,7 +25,6 @@ Partial Class AudioOutputSettings
         Label3 = New Label()
         ComboBox1 = New ComboBox()
         CheckBox1 = New CheckBox()
-        Button1 = New Button()
         SuspendLayout()
         ' 
         ' Label3
@@ -59,22 +58,11 @@ Partial Class AudioOutputSettings
         CheckBox1.Text = "Enable audio output filter"
         CheckBox1.UseVisualStyleBackColor = True
         ' 
-        ' Button1
-        ' 
-        Button1.Font = New Font("Segoe UI", 6.75F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        Button1.Location = New Point(-1, 117)
-        Button1.Name = "Button1"
-        Button1.Size = New Size(109, 19)
-        Button1.TabIndex = 20
-        Button1.Text = "Reveal the secret sauce"
-        Button1.UseVisualStyleBackColor = True
-        ' 
         ' AudioOutputSettings
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(319, 135)
-        Controls.Add(Button1)
         Controls.Add(CheckBox1)
         Controls.Add(Label3)
         Controls.Add(ComboBox1)
@@ -87,5 +75,4 @@ Partial Class AudioOutputSettings
     Friend WithEvents Label3 As Label
     Friend WithEvents ComboBox1 As ComboBox
     Friend WithEvents CheckBox1 As CheckBox
-    Friend WithEvents Button1 As Button
 End Class

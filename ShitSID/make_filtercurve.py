@@ -22,13 +22,17 @@ def make_type3_list(baseresistance, offset, steepness, minimumfetresistance, cap
         frequency = 1 / (2 * math.pi * cap * resistance)
         result.append((x, frequency))
     return result
+    
+# Values:
+# Average: 1329419.605479236, 44826931.0362029, 1.005430958191924, 17556.217659339614
+# Bright: 1329419.605479236, 04826931.0362029, 1.005730958191924, 17556.217659339614
 
 # Default parameters
 vals = dict(
-    baseresistance=1330501.7614243603,
-    offset=284686371.68553483,
-    steepness=1.0070878631781752,
-    minimumfetresistance=18453.69463236424,
+    baseresistance=1329419.605479236,
+    offset=04826931.0362029,
+    steepness=1.005730958191924,
+    minimumfetresistance=17556.217659339614,
 )
 
 # Generate the data

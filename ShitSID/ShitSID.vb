@@ -1,8 +1,14 @@
 ﻿Imports NAudio.Wave
 Imports System
 Public Class ShitSID
+    Enum FilterCurveType
+        Dark
+        Average
+        Bright
+    End Enum
     Public SampleRate As Int32 = 44100
     Public Filter As SIDFilter
+    Public FilterCurve As FilterCurveType = FilterCurveType.Average
     Public Voices(2) As Voice
     Public currentTime As Double = 0
     Public filterCutoffLo As Integer = 0
@@ -18,7 +24,7 @@ Public Class ShitSID
     Const ClocksPerFrame = 985248.0
     Public Sub New(Optional samplerate As Int32 = 44100)
         Me.SampleRate = samplerate
-        Filter = New SIDFilter(samplerate)
+        Filter = New SIDFilter(Me, samplerate)
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
         Next
@@ -171,7 +177,7 @@ Public Class ShitSID
     End Sub
     Public Sub Reset()
         currentTime = 0
-        Filter = New SIDFilter(SampleRate)
+        Filter = New SIDFilter(Me, SampleRate)
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
         Next
@@ -448,7 +454,7 @@ Public Class EnvelopeGenerator
     Private state As EState = EState.Release
     Private nextState As EState = EState.Release
     Private counterEnabled As Boolean = True
-    Private envelopeCounter As Byte = &HAA
+    Private envelopeCounter As Byte = &H0
     Private env3 As Byte
 
     Public Sub New()
@@ -658,6 +664,7 @@ Public Class SIDFilter
     End Enum
 
     Public Mode6581 As Boolean = False
+    Public parent As ShitSID
     Private filterType As EFilterType = EFilterType.LowPass
     Private resonance As Double = 0.0 ' 0.0 to 1.0
     Private cutoffVal As Integer = 0          ' 0..2047 (11-bit)
@@ -672,7 +679,8 @@ Public Class SIDFilter
     Public CutoffBias As Int32 = 0
     Public ResonanceDivider As Double = 1
 
-    Public Sub New(Optional sampleRate As Double = 44100.0)
+    Public Sub New(pnt As ShitSID, Optional sampleRate As Double = 44100.0)
+        parent = pnt
         Me.sampleRate = sampleRate
     End Sub
 
@@ -697,7 +705,10 @@ Public Class SIDFilter
     Private Function InterpolatedCutoff() As Double
         ' Keep your existing 6581/8580 curves for the SVF path
         If Mode6581 Then
-            Return cutoffCurve6581Dark(cutoffVal).Item2
+            If parent.FilterCurve = ShitSID.FilterCurveType.Dark Then Return cutoffCurve6581Dark(cutoffVal).Item2
+            If parent.FilterCurve = ShitSID.FilterCurveType.Average Then Return cutoffCurve6581(cutoffVal).Item2
+            If parent.FilterCurve = ShitSID.FilterCurveType.Bright Then Return cutoffCurve6581Bright(cutoffVal).Item2
+            Return cutoffCurve6581(cutoffVal).Item2
         Else
             Return cutoffCurve8580(cutoffVal).Item2
         End If
@@ -818,7 +829,5 @@ Public Class SIDFilter
         bandpass = 0
         lowpass = 0
         highpass = 0
-        ' 6581 path state is inside Integrator; reinstantiate if you want a hard reset:
-        ' (or add a Reset method to Integrator6581 to clear vc/vx)
     End Sub
 End Class
