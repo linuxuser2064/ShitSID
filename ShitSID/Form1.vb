@@ -190,11 +190,13 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     End Sub
 
     Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+#If DEBUG Then
         Using fs As New FileStream("ramdump.bin", FileMode.Create, FileAccess.Write)
             For i = 0 To 65535
                 fs.WriteByte(mem(i))
             Next
         End Using
+#End If
         'provider.sid.Filter.fs.Dispose()
     End Sub
 
