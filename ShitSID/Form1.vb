@@ -3,12 +3,9 @@ Imports Highbyte.DotNet6502
 Imports System.IO
 Imports NAudio.CoreAudioApi
 Imports System.Runtime.InteropServices
+Imports NAudio.MediaFoundation
 Public Class Form1
-
-
     Public SAMPLERATE = 88200
-
-
     Public sid As ShitSID
     Public cpu As New CPU
     Dim delayMS = 20 ' this does not work
@@ -25,18 +22,20 @@ Public Class Form1
     Public Shared Function QueryPerformanceFrequency(ByRef lpFrequency As Long) As Boolean
     End Function
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        OpenFileDialog1.ShowDialog()
+        If OpenFileDialog1.ShowDialog = DialogResult.OK Then
+            ' if this dies im blaming chatgp
+            If waveOut IsNot Nothing Then
+                waveOut.Stop()
+                waveOut.Dispose()
+                waveOut = Nothing
+            End If
+            LoadSID()
+            PlaySID()
+        End If
     End Sub
     Public sidfile As SidFile
     Public fakeClockCount = 0
-    Private Sub LoadAndPlaySID()
-        ' Stop and dispose existing audio if playing
-        If waveOut IsNot Nothing Then
-            waveOut.Stop()
-            waveOut.Dispose()
-            waveOut = Nothing
-        End If
-
+    Private Sub LoadSID()
         ' Reinitialize components
         sid = New ShitSID(SAMPLERATE)
         cpu = New CPU()
@@ -44,47 +43,30 @@ Public Class Form1
         cpu.SP = 2
         mem(1) = &H37
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
-        If sidfile.FlagBits(2) = True AndAlso sidfile.FlagBits(3) = False Then
-            delayMS = 16 ' NTSC
-        End If
         If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
             mem(&H2A6) = 1 ' PAL
         End If
-        If sidfile.FlagBits(4) = False AndAlso sidfile.FlagBits(5) = True Then
-            ' 6581 mode
-            CheckBox6.Checked = True
-            sid.Filter.Mode6581 = True
-        End If
-        If sidfile.Speed Or 4294967167 = 1 Then
-            delayMS = 16 ' CIA timer - ~60hz
-            mem(&H2A6) = 0
-        Else
-            delayMS = 20 ' raster interrupt - 50hz
-            mem(&H2A6) = 1
-        End If
+
         ' Set song number from UI or default
         If NumericUpDown1.Value > 0 Then
             cpu.A = NumericUpDown1.Value - 1
         Else
             cpu.A = sidfile.StartSong - 1
         End If
-        If CheckBox2.Checked Then
-            sid.Voices(0).MuteVoice = True
-        Else
-            sid.Voices(0).MuteVoice = False
-        End If
-        If CheckBox3.Checked Then
-            sid.Voices(1).MuteVoice = True
-        Else
-            sid.Voices(1).MuteVoice = False
-        End If
-        If CheckBox4.Checked Then
-            sid.Voices(2).MuteVoice = True
-        Else
-            sid.Voices(2).MuteVoice = False
-        End If
+        sid.Voices(0).MuteVoice = CheckBox2.Checked
+        sid.Voices(1).MuteVoice = CheckBox3.Checked
+        sid.Voices(2).MuteVoice = CheckBox4.Checked
+        sid.MuteSamples = CheckBox8.Checked
+        For Each x As Voice In sid.Voices
+            x.LoFiDuty = CheckBox1.Checked
+        Next
+        sid.Filter.Mode6581 = CheckBox6.Checked
+        sid.InternalAudioFilter = AudioOutputSettings.CheckBox1.Checked
         sid.Filter.CutoffBias = NumericUpDown3.Value
+        sid.Filter.CutoffMultiplier = NumericUpDown2.Value
         sid.Filter.ResonanceDivider = NumericUpDown4.Value
+        sid.bypassFilter = CheckBox7.Checked
+        sid.VolumeSampleMode = RadioButton1.Checked
         CheckBox6_CheckedChanged(Nothing, Nothing)
         cpu.PC = sidfile.InitAddress
         Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
@@ -94,6 +76,8 @@ Public Class Form1
         Else
             provider.UseNTSC = False
         End If
+    End Sub
+    Public Sub PlaySID()
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
         provider.sidfile = sidfile
         provider.InitSIDFile()
@@ -109,20 +93,17 @@ Public Class Form1
     Public Sub pr(str As String)
         Console.WriteLine(str)
     End Sub
-    Private Sub OpenFileDialog1_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog1.FileOk
-        ' if this dies im blaming chatgp
-        LoadAndPlaySID()
-    End Sub
-
     Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
-        If CheckBox1.Checked Then
-            For Each x As Voice In sid.Voices
-                x.LoFiDuty = True
-            Next
-        Else
-            For Each x As Voice In sid.Voices
-                x.LoFiDuty = False
-            Next
+        If sid IsNot Nothing Then
+            If CheckBox1.Checked Then
+                For Each x As Voice In sid.Voices
+                    x.LoFiDuty = True
+                Next
+            Else
+                For Each x As Voice In sid.Voices
+                    x.LoFiDuty = False
+                Next
+            End If
         End If
     End Sub
 
@@ -143,29 +124,34 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         StatsViewer.Show()
     End Sub
 
-    Private Sub CheckBox2_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox2.CheckedChanged, CheckBox4.CheckedChanged, CheckBox3.CheckedChanged
-        If CheckBox2.Checked Then
-            sid.Voices(0).MuteVoice = True
-        Else
-            sid.Voices(0).MuteVoice = False
-        End If
-        If CheckBox3.Checked Then
-            sid.Voices(1).MuteVoice = True
-        Else
-            sid.Voices(1).MuteVoice = False
-        End If
-        If CheckBox4.Checked Then
-            sid.Voices(2).MuteVoice = True
-        Else
-            sid.Voices(2).MuteVoice = False
+    Private Sub CheckBox2_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox2.CheckedChanged, CheckBox4.CheckedChanged, CheckBox3.CheckedChanged, CheckBox8.CheckedChanged
+        If sid IsNot Nothing Then
+            If CheckBox2.Checked Then
+                sid.Voices(0).MuteVoice = True
+            Else
+                sid.Voices(0).MuteVoice = False
+            End If
+            If CheckBox3.Checked Then
+                sid.Voices(1).MuteVoice = True
+            Else
+                sid.Voices(1).MuteVoice = False
+            End If
+            If CheckBox4.Checked Then
+                sid.Voices(2).MuteVoice = True
+            Else
+                sid.Voices(2).MuteVoice = False
+            End If
+            sid.MuteSamples = CheckBox8.Checked
         End If
     End Sub
 
     Private Sub CheckBox5_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox5.CheckedChanged
-        If CheckBox5.Checked Then
-            provider.UseNTSC = True
-        Else
-            provider.UseNTSC = False
+        If sid IsNot Nothing Then
+            If CheckBox5.Checked Then
+                provider.UseNTSC = True
+            Else
+                provider.UseNTSC = False
+            End If
         End If
     End Sub
 
@@ -186,12 +172,6 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         If sid IsNot Nothing Then
             If CheckBox6.Checked Then
                 sid.Filter.Mode6581 = True
-                'sid.Filter.CutoffMultiplier = 2
-                'sid.Filter.CutoffBias = 425
-                'sid.Filter.ResonanceDivider = 4
-                sid.Filter.CutoffMultiplier = 2
-                sid.Filter.CutoffBias = 0
-                sid.Filter.ResonanceDivider = 2
                 sid.Filter.Reset()
             Else
                 sid.Filter.Mode6581 = False
@@ -201,11 +181,6 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        For Each x As Control In Me.Controls
-            x.Enabled = False
-        Next
-        Button1.Enabled = True
-        ComboBox1.Enabled = True
     End Sub
 
     Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
@@ -241,7 +216,38 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         End If
     End Sub
 
-    Private Sub ComboBox1_TextUpdate(sender As Object, e As EventArgs) Handles ComboBox1.TextChanged
-        SAMPLERATE = CInt(ComboBox1.Text)
+    Private Sub NumericUpDown2_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged
+        If sid IsNot Nothing Then
+            sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+        End If
+    End Sub
+
+    Private Sub Button6_Click(sender As Object, e As EventArgs) Handles Button6.Click
+        If Not OpenFileDialog1.ShowDialog = DialogResult.OK Then
+            Exit Sub
+        End If
+        Console.WriteLine("Init MF...")
+        MediaFoundationApi.Startup()
+        ' NOT TESTED
+        Console.WriteLine("Loading SID...")
+        LoadSID()
+        provider.sidfile = sidfile
+        provider.InitSIDFile()
+        Console.WriteLine("Creating MediaType...")
+        Dim type As New MediaType(provider.WaveFormat)
+        Console.WriteLine("Creating MF encoder...")
+        Dim wavProv As New NAudio.Wave.MediaFoundationEncoder(type)
+        Console.WriteLine("Encoding...")
+        provider.runCPU = True
+        wavProv.Encode("output.wav", provider.Take(TimeSpan.FromSeconds(NumericUpDown5.Value)).ToWaveProvider)
+        Console.WriteLine("Done")
+    End Sub
+
+    Private Sub Button5_Click(sender As Object, e As EventArgs) Handles Button5.Click
+        AudioOutputSettings.ShowDialog()
+    End Sub
+
+    Private Sub CheckBox8_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox8.CheckedChanged
+
     End Sub
 End Class

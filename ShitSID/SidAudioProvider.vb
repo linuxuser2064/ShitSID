@@ -3,7 +3,7 @@ Imports NAudio.Wave
 
 Public Class SidAudioProvider
     Implements ISampleProvider
-    Public Property Volume As Single = 0.33333333333333331 ' <-- floating point precision everyone
+    Public Property Volume As Single = 0.5
     Public sid As ShitSID
     Public sidfile As SidFile
     Public cpu As New CPU
@@ -41,6 +41,13 @@ Public Class SidAudioProvider
                                  sid.WriteRegister(addr, value)
                              End Sub)
         Next
+
+        mem.MapReader(54299, Function(addr As UShort)
+                                 Return sid.Voices(2).GenerateNoEnvelope(sid.currentTime) * 127
+                             End Function)
+        mem.MapReader(54300, Function(addr As UShort)
+                                 Return sid.Voices(2).Envelope.Output
+                             End Function)
         mem.MapWriter(56580, Sub(addr As UShort, value As Byte)
                                  TimerLoByte = value
                                  Console.WriteLine($"Timer A every {BitConverter.ToUInt16({TimerLoByte, TimerHiByte})} cycles")

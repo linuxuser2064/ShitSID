@@ -37,6 +37,8 @@ Partial Class Form1
         CheckBox4 = New CheckBox()
         CheckBox5 = New CheckBox()
         GroupBox1 = New GroupBox()
+        Label6 = New Label()
+        NumericUpDown2 = New NumericUpDown()
         CheckBox7 = New CheckBox()
         CheckBox6 = New CheckBox()
         Label5 = New Label()
@@ -49,13 +51,20 @@ Partial Class Form1
         RadioButton2 = New RadioButton()
         RadioButton1 = New RadioButton()
         Button4 = New Button()
-        ComboBox1 = New ComboBox()
+        Button5 = New Button()
+        GroupBox3 = New GroupBox()
         Label3 = New Label()
+        NumericUpDown5 = New NumericUpDown()
+        Button6 = New Button()
+        CheckBox8 = New CheckBox()
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox1.SuspendLayout()
+        CType(NumericUpDown2, ComponentModel.ISupportInitialize).BeginInit()
         CType(NumericUpDown4, ComponentModel.ISupportInitialize).BeginInit()
         CType(NumericUpDown3, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox2.SuspendLayout()
+        GroupBox3.SuspendLayout()
+        CType(NumericUpDown5, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' Button1
@@ -127,6 +136,7 @@ Partial Class Form1
         ' 
         ' Button3
         ' 
+        Button3.Enabled = False
         Button3.Location = New Point(109, 71)
         Button3.Margin = New Padding(3, 2, 3, 2)
         Button3.Name = "Button3"
@@ -171,7 +181,7 @@ Partial Class Form1
         ' CheckBox5
         ' 
         CheckBox5.AutoSize = True
-        CheckBox5.Location = New Point(275, 76)
+        CheckBox5.Location = New Point(275, 100)
         CheckBox5.Margin = New Padding(3, 2, 3, 2)
         CheckBox5.Name = "CheckBox5"
         CheckBox5.Size = New Size(101, 19)
@@ -181,6 +191,8 @@ Partial Class Form1
         ' 
         ' GroupBox1
         ' 
+        GroupBox1.Controls.Add(Label6)
+        GroupBox1.Controls.Add(NumericUpDown2)
         GroupBox1.Controls.Add(CheckBox7)
         GroupBox1.Controls.Add(CheckBox6)
         GroupBox1.Controls.Add(Label5)
@@ -191,15 +203,36 @@ Partial Class Form1
         GroupBox1.Margin = New Padding(3, 2, 3, 2)
         GroupBox1.Name = "GroupBox1"
         GroupBox1.Padding = New Padding(3, 2, 3, 2)
-        GroupBox1.Size = New Size(238, 97)
+        GroupBox1.Size = New Size(238, 125)
         GroupBox1.TabIndex = 12
         GroupBox1.TabStop = False
         GroupBox1.Text = "Filter controls"
         ' 
+        ' Label6
+        ' 
+        Label6.AutoSize = True
+        Label6.Location = New Point(5, 26)
+        Label6.Name = "Label6"
+        Label6.Size = New Size(95, 15)
+        Label6.TabIndex = 9
+        Label6.Text = "Cutoff multiplier"
+        ' 
+        ' NumericUpDown2
+        ' 
+        NumericUpDown2.DecimalPlaces = 3
+        NumericUpDown2.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
+        NumericUpDown2.Location = New Point(136, 24)
+        NumericUpDown2.Margin = New Padding(3, 2, 3, 2)
+        NumericUpDown2.Maximum = New Decimal(New Integer() {32767, 0, 0, 0})
+        NumericUpDown2.Name = "NumericUpDown2"
+        NumericUpDown2.Size = New Size(74, 23)
+        NumericUpDown2.TabIndex = 8
+        NumericUpDown2.Value = New Decimal(New Integer() {1, 0, 0, 0})
+        ' 
         ' CheckBox7
         ' 
         CheckBox7.AutoSize = True
-        CheckBox7.Location = New Point(119, 71)
+        CheckBox7.Location = New Point(122, 102)
         CheckBox7.Name = "CheckBox7"
         CheckBox7.Size = New Size(91, 19)
         CheckBox7.TabIndex = 7
@@ -209,7 +242,7 @@ Partial Class Form1
         ' CheckBox6
         ' 
         CheckBox6.AutoSize = True
-        CheckBox6.Location = New Point(2, 71)
+        CheckBox6.Location = New Point(5, 102)
         CheckBox6.Margin = New Padding(3, 2, 3, 2)
         CheckBox6.Name = "CheckBox6"
         CheckBox6.Size = New Size(111, 19)
@@ -220,7 +253,7 @@ Partial Class Form1
         ' Label5
         ' 
         Label5.AutoSize = True
-        Label5.Location = New Point(5, 44)
+        Label5.Location = New Point(5, 69)
         Label5.Name = "Label5"
         Label5.Size = New Size(103, 15)
         Label5.TabIndex = 5
@@ -230,18 +263,18 @@ Partial Class Form1
         ' 
         NumericUpDown4.DecimalPlaces = 2
         NumericUpDown4.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
-        NumericUpDown4.Location = New Point(136, 43)
+        NumericUpDown4.Location = New Point(136, 68)
         NumericUpDown4.Margin = New Padding(3, 2, 3, 2)
         NumericUpDown4.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
         NumericUpDown4.Name = "NumericUpDown4"
         NumericUpDown4.Size = New Size(74, 23)
         NumericUpDown4.TabIndex = 4
-        NumericUpDown4.Value = New Decimal(New Integer() {3, 0, 0, 0})
+        NumericUpDown4.Value = New Decimal(New Integer() {2, 0, 0, 0})
         ' 
         ' Label4
         ' 
         Label4.AutoSize = True
-        Label4.Location = New Point(5, 23)
+        Label4.Location = New Point(5, 48)
         Label4.Name = "Label4"
         Label4.Size = New Size(65, 15)
         Label4.TabIndex = 3
@@ -250,7 +283,7 @@ Partial Class Form1
         ' NumericUpDown3
         ' 
         NumericUpDown3.Increment = New Decimal(New Integer() {50, 0, 0, 0})
-        NumericUpDown3.Location = New Point(136, 21)
+        NumericUpDown3.Location = New Point(136, 46)
         NumericUpDown3.Margin = New Padding(3, 2, 3, 2)
         NumericUpDown3.Maximum = New Decimal(New Integer() {20154, 0, 0, 0})
         NumericUpDown3.Minimum = New Decimal(New Integer() {20154, 0, 0, Integer.MinValue})
@@ -270,7 +303,7 @@ Partial Class Form1
         ' 
         GroupBox2.Controls.Add(RadioButton2)
         GroupBox2.Controls.Add(RadioButton1)
-        GroupBox2.Location = New Point(256, 131)
+        GroupBox2.Location = New Point(256, 125)
         GroupBox2.Name = "GroupBox2"
         GroupBox2.Size = New Size(144, 64)
         GroupBox2.TabIndex = 13
@@ -301,39 +334,82 @@ Partial Class Form1
         ' 
         ' Button4
         ' 
-        Button4.Location = New Point(325, 201)
+        Button4.Enabled = False
+        Button4.Location = New Point(256, 200)
         Button4.Name = "Button4"
-        Button4.Size = New Size(75, 23)
+        Button4.Size = New Size(51, 23)
         Button4.TabIndex = 14
         Button4.Text = "Pause"
         Button4.UseVisualStyleBackColor = True
         ' 
-        ' ComboBox1
+        ' Button5
         ' 
-        ComboBox1.FormattingEnabled = True
-        ComboBox1.Items.AddRange(New Object() {"8000", "11025", "16000", "22050", "32000", "44100", "48000", "64000", "65536", "88200", "96000", "176400", "192000"})
-        ComboBox1.Location = New Point(198, 202)
-        ComboBox1.Name = "ComboBox1"
-        ComboBox1.Size = New Size(121, 23)
-        ComboBox1.TabIndex = 15
-        ComboBox1.Text = "88200"
+        Button5.Location = New Point(313, 200)
+        Button5.Name = "Button5"
+        Button5.Size = New Size(91, 23)
+        Button5.TabIndex = 17
+        Button5.Text = "Audio settings"
+        Button5.UseVisualStyleBackColor = True
+        ' 
+        ' GroupBox3
+        ' 
+        GroupBox3.Controls.Add(Label3)
+        GroupBox3.Controls.Add(NumericUpDown5)
+        GroupBox3.Controls.Add(Button6)
+        GroupBox3.Location = New Point(12, 228)
+        GroupBox3.Name = "GroupBox3"
+        GroupBox3.Size = New Size(388, 155)
+        GroupBox3.TabIndex = 18
+        GroupBox3.TabStop = False
+        GroupBox3.Text = "Export controls"
         ' 
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(120, 205)
+        Label3.Location = New Point(3, 49)
         Label3.Name = "Label3"
-        Label3.Size = New Size(72, 15)
-        Label3.TabIndex = 16
-        Label3.Text = "Sample rate:"
+        Label3.Size = New Size(77, 15)
+        Label3.TabIndex = 2
+        Label3.Text = "Export length"
+        ' 
+        ' NumericUpDown5
+        ' 
+        NumericUpDown5.Location = New Point(86, 47)
+        NumericUpDown5.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
+        NumericUpDown5.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
+        NumericUpDown5.Name = "NumericUpDown5"
+        NumericUpDown5.Size = New Size(103, 23)
+        NumericUpDown5.TabIndex = 1
+        NumericUpDown5.Value = New Decimal(New Integer() {60, 0, 0, 0})
+        ' 
+        ' Button6
+        ' 
+        Button6.Location = New Point(6, 22)
+        Button6.Name = "Button6"
+        Button6.Size = New Size(75, 23)
+        Button6.TabIndex = 0
+        Button6.Text = "Run export"
+        Button6.UseVisualStyleBackColor = True
+        ' 
+        ' CheckBox8
+        ' 
+        CheckBox8.AutoSize = True
+        CheckBox8.Location = New Point(275, 77)
+        CheckBox8.Margin = New Padding(3, 2, 3, 2)
+        CheckBox8.Name = "CheckBox8"
+        CheckBox8.Size = New Size(100, 19)
+        CheckBox8.TabIndex = 19
+        CheckBox8.Text = "Mute samples"
+        CheckBox8.UseVisualStyleBackColor = True
         ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(409, 233)
-        Controls.Add(Label3)
-        Controls.Add(ComboBox1)
+        ClientSize = New Size(407, 231)
+        Controls.Add(CheckBox8)
+        Controls.Add(GroupBox3)
+        Controls.Add(Button5)
         Controls.Add(Button4)
         Controls.Add(GroupBox2)
         Controls.Add(GroupBox1)
@@ -355,10 +431,14 @@ Partial Class Form1
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).EndInit()
         GroupBox1.ResumeLayout(False)
         GroupBox1.PerformLayout()
+        CType(NumericUpDown2, ComponentModel.ISupportInitialize).EndInit()
         CType(NumericUpDown4, ComponentModel.ISupportInitialize).EndInit()
         CType(NumericUpDown3, ComponentModel.ISupportInitialize).EndInit()
         GroupBox2.ResumeLayout(False)
         GroupBox2.PerformLayout()
+        GroupBox3.ResumeLayout(False)
+        GroupBox3.PerformLayout()
+        CType(NumericUpDown5, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -389,7 +469,13 @@ Partial Class Form1
     Friend WithEvents RadioButton2 As RadioButton
     Friend WithEvents RadioButton1 As RadioButton
     Friend WithEvents Button4 As Button
-    Friend WithEvents ComboBox1 As ComboBox
+    Friend WithEvents Label6 As Label
+    Friend WithEvents NumericUpDown2 As NumericUpDown
+    Friend WithEvents Button5 As Button
+    Friend WithEvents GroupBox3 As GroupBox
+    Friend WithEvents Button6 As Button
+    Friend WithEvents NumericUpDown5 As NumericUpDown
     Friend WithEvents Label3 As Label
+    Friend WithEvents CheckBox8 As CheckBox
 
 End Class
