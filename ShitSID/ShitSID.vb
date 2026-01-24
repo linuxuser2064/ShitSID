@@ -80,32 +80,44 @@ Public Class ShitSID
             End If
             output += (VolumeRegister - 15) / 4
         End If
+        output /= 4
+        'output = output - (output * output) ' holy distortion
         If InternalAudioFilter Then
-            Return LowPassSample(output / 4, 17640, SampleRate)
+            Return LowPassSample(output, 17640, SampleRate)
         Else
-            Return output / 4
+            Return output
         End If
     End Function
 
-
+    Public Function ReadRegister(addr As Integer) As Byte
+        Select Case addr
+            Case 54299
+                Return (Voices(2).GenerateNoEnvelope(CurrentTime) * 96) + 127
+            Case 54300
+                Return Voices(2).Envelope.Output
+            Case Else
+                Return 0
+        End Select
+    End Function
     Public Sub WriteRegister(addr As Integer, value As Byte)
+        'Console.WriteLine($"SID Write {addr.ToString("X4")} to {value.ToString("X2")}")
         ' Handle register writes immediately
         Select Case addr
         ' Filter settings
             Case &HD415
                 Dim bits As New BitArray({value})
-                filterCutoffLo = 0
-                If bits(0) Then filterCutoffLo += 1
-                If bits(1) Then filterCutoffLo += 2
-                If bits(2) Then filterCutoffLo += 4
+                FilterCutoffLo = 0
+                If bits(0) Then FilterCutoffLo += 1
+                If bits(1) Then FilterCutoffLo += 2
+                If bits(2) Then FilterCutoffLo += 4
                 UpdateFilterSettings()
                 Return
             Case &HD416
-                filterCutoffHi = value
+                FilterCutoffHi = value
                 UpdateFilterSettings()
                 Return
             Case &HD417
-                filterResonance = (value >> 4) And &HF
+                FilterResonance = (value >> 4) And &HF
                 Voices(0).UseFilter = (value And 1) <> 0
                 Voices(1).UseFilter = (value And 2) <> 0
                 Voices(2).UseFilter = (value And 4) <> 0
@@ -113,10 +125,10 @@ Public Class ShitSID
                 Return
             Case &HD418
                 Dim bits As New BitArray({value})
-                filterMode = 0
-                If bits(4) Then filterMode += SIDFilter.EFilterType.LowPass
-                If bits(5) Then filterMode += SIDFilter.EFilterType.BandPass
-                If bits(6) Then filterMode += SIDFilter.EFilterType.HighPass
+                FilterMode = 0
+                If bits(4) Then FilterMode += SIDFilter.EFilterType.LowPass
+                If bits(5) Then FilterMode += SIDFilter.EFilterType.BandPass
+                If bits(6) Then FilterMode += SIDFilter.EFilterType.HighPass
                 MuteVoice3 = bits(7)
                 VolumeRegister = value And &HF
                 UpdateFilterSettings()
@@ -175,7 +187,6 @@ Public Class ShitSID
         Dim cutoff = combined
         Filter.SetCutoff(cutoff)
         Filter.SetResonance(filterResonance)
-
         Dim mode As SIDFilter.EFilterType = SIDFilter.EFilterType.None
         If (filterMode And 1) <> 0 Then mode = mode Or SIDFilter.EFilterType.LowPass
         If (filterMode And 2) <> 0 Then mode = mode Or SIDFilter.EFilterType.BandPass
@@ -192,6 +203,7 @@ Public Class ShitSID
     End Sub
 End Class
 Public Class Voice
+    Private lfsr As New SidNoiseLFSR
     Public MuteVoice As Boolean = False
     Public LoFiDuty As Boolean = False
     Public Frequency As Double = 440.0
@@ -252,9 +264,6 @@ Public Class Voice
         phase += newFrequency * deltaTime
         phase = phase Mod 1.0
 
-        'Frequency += rand.Next(-1, 2)
-
-
         ' new 12 bit accumulator
         Dim acc As Integer = CInt(phase * &HFFF) ' 3 nybbles looks cursed
         ' sid accurate waveform generation
@@ -274,14 +283,13 @@ Public Class Voice
             Case "square"
                 dacInput = pulseVal
             Case "noise"
-                ' still float noise
                 Dim cycleDuration As Double = 1.0 / Frequency
                 Dim interval As Double = cycleDuration / 16.0
                 If time - lastNoiseUpdate >= interval Then
                     lastNoiseUpdate = time
-                    currentNoise = rand.NextDouble() * 2 - 1
+                    currentNoise = lfsr.Read(acc) 'rand.NextDouble() * 2 - 1
                 End If
-                wave = currentNoise
+                dacInput = currentNoise
             Case "saw+tri"
                 If Parent.Filter.Mode6581 Then
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) * 16)
@@ -320,15 +328,10 @@ Public Class Voice
                 dacInput *= 0
             End If
         End If
-        ' if not noise then 12-bit -> float
-        If Waveform <> "noise" Then
-            ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
-            wave = (dacInput / &HFFF) * 2.0 - 1.0
-        End If
-
+        ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
+        wave = (dacInput / &HFFF) * 2.0 - 1.0
         '  hardsync
-        Dim masterVoice As Voice = Me.Parent.Voices(sourceIndex)
-        Dim masterPhaseMSB As Boolean = (masterVoice.phase >= 0.5)
+        Dim masterPhaseMSB As Boolean = (sourceVoice.phase >= 0.5)
         If (Control And &H2) <> 0 Then
             If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
                 Me.phase = 0.0
@@ -337,113 +340,12 @@ Public Class Voice
         prevMasterMSB = masterPhaseMSB
         Return wave
     End Function
-    Private rand As New Random()
     Public Function Generate(time As Double) As Double
-        Dim deltaTime As Double = time - lastTime
-        lastTime = time
-        Dim wave As Double
-
-        If (Control And &H8) <> 0 Then ' test bit
-            Return Envelope.Output / 255.0
-        End If
-
-        ' sync/ringmod stuff
-        Dim sourceIndex As Integer = (Me.Index + 2) Mod 3
-        Dim sourceVoice = Me.Parent.Voices(sourceIndex)
-
-        Dim newFrequency = Frequency
-
-        ' phase accumulator
-        phase += newFrequency * deltaTime
-        phase = phase Mod 1.0
-
-        'Frequency += rand.Next(-1, 2)
-
         Dim envLevel = Envelope.Output / 255.0
-        'If envLevel <= 0 AndAlso Envelope.IsIdle() Then Return 0
+        Dim output = GenerateNoEnvelope(time) * envLevel
 
-        ' new 12 bit accumulator
-        Dim acc As Integer = CInt(phase * &HFFF) ' 3 nybbles looks cursed
-        ' sid accurate waveform generation
-        Dim sawVal As Integer = acc
-        Dim triVal As Integer = (acc << 1) And &HFFF
-        If (acc And &H800) <> 0 Then ' MSB is bit 11
-            triVal = triVal Xor &HFFF
-        End If
-        Dim pulseVal As Integer = If(acc < DutyCycle * &HFFF, &HFFF, 0)
-
-        Dim dacInput As Integer = 0
-        Select Case Waveform
-            Case "saw"
-                dacInput = sawVal
-            Case "tri"
-                dacInput = triVal
-            Case "square"
-                dacInput = pulseVal
-            Case "noise"
-                ' still float noise
-                Dim cycleDuration As Double = 1.0 / Frequency
-                Dim interval As Double = cycleDuration / 16.0
-                If time - lastNoiseUpdate >= interval Then
-                    lastNoiseUpdate = time
-                    currentNoise = rand.NextDouble() * 2 - 1
-                End If
-                wave = currentNoise
-            Case "saw+tri"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) * 16)
-                End If
-            Case "tri+pulse"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) * 16)
-                End If
-            Case "saw+pulse"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) * 16)
-                End If
-            Case "saw+tri+pulse"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
-                End If
-            Case Else
-                dacInput = 0
-        End Select
-        ' xor ringmod
-        If Waveform = "tri" AndAlso (Control And &H4) Then
-            If sourceVoice.phase >= 0.5 Then
-                dacInput = 4095 - dacInput
-            End If
-        End If
-        If (Waveform = "saw+tri" Or Waveform = "tri+pulse" Or Waveform = "saw+pulse" Or Waveform = "saw+tri+pulse") AndAlso (Control And &H4) Then
-            If sourceVoice.phase >= 0.5 Then
-                dacInput *= 0
-            End If
-        End If
-        ' if not noise then 12-bit -> float
-        If Waveform <> "noise" Then
-            ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
-            wave = (dacInput / &HFFF) * 2.0 - 1.0
-        End If
-
-        '  hardsync
-        Dim masterVoice As Voice = Me.Parent.Voices(sourceIndex)
-        Dim masterPhaseMSB As Boolean = (masterVoice.phase >= 0.5)
-        If (Control And &H2) <> 0 Then
-            If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
-                Me.phase = 0.0
-            End If
-        End If
-        prevMasterMSB = masterPhaseMSB
         If MuteVoice Then Return 0
-        Return wave * envLevel
+        Return output
     End Function
 End Class
 Public Class EnvelopeGenerator
@@ -712,7 +614,6 @@ Public Class SIDFilter
     Public CutoffMultiplier As Double = 1
     Public CutoffBias As Int32 = 0
     Public ResonanceDivider As Double = 1
-
     Public Sub New(pnt As ShitSID, Optional sampleRate As Double = 44100.0)
         parent = pnt
         Me.sampleRate = sampleRate
@@ -747,7 +648,6 @@ Public Class SIDFilter
             Return cutoffCurve8580(cutoffVal).Item2
         End If
     End Function
-
     Public Function ApplyFilter(input As Double) As Double
         ' === Basic filter math ===
         Dim freq = (InterpolatedCutoff() * CutoffMultiplier) + CutoffBias
@@ -813,5 +713,46 @@ Public Class SIDFilter
         bandpass = 0
         lowpass = 0
         highpass = 0
+    End Sub
+End Class
+Public Class SidNoiseLFSR
+    ' 23-bit shift register (SID initial state, all ones except LSBs)
+    Private noiseSR As Integer = &H7FFFFC
+
+    ' Track previous accumulator to detect rising edge
+    Private prevAcc As Integer = 0
+
+    ' Bit mask for rising edge detection (SID uses bit 19)
+    Private Const BIT19 As Integer = &H80000
+
+    ' Call once per sample, passing the oscillator accumulator (24-bit integer)
+    Public Function Read(acc As Integer) As Integer
+        ' Detect rising edge of accumulator bit 19
+        'If ((prevAcc And BIT19) = 0) AndAlso ((acc And BIT19) <> 0) Then
+        Shift()
+        'End If
+
+        prevAcc = acc
+
+        ' Convert shift register state to SID-style 8-bit noise
+        Dim noise8 As Integer =
+    ((noiseSR >> 22) And 1) << 7 Or
+    ((noiseSR >> 20) And 1) << 6 Or
+    ((noiseSR >> 16) And 1) << 5 Or
+    ((noiseSR >> 13) And 1) << 4 Or
+    ((noiseSR >> 11) And 1) << 3 Or
+    ((noiseSR >> 7) And 1) << 2 Or
+    ((noiseSR >> 4) And 1) << 1 Or
+    ((noiseSR >> 2) And 1)
+
+        ' Convert to 12-bit output (0–4095)
+        Return (noise8 << 4) ' multiply by 16
+    End Function
+
+    ' Single SID noise shift step
+    Private Sub Shift()
+        ' New bit = XOR taps at bit22 and bit17
+        Dim newBit As Integer = ((noiseSR >> 22) Xor (noiseSR >> 17)) And 1
+        noiseSR = ((noiseSR << 1) And &H7FFFFF) Or newBit ' Keep 23 bits
     End Sub
 End Class

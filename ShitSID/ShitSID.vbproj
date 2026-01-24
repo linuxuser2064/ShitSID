@@ -28,8 +28,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Highbyte.DotNet6502" Version="0.24.0-alpha" />
+    <PackageReference Include="Highbyte.DotNet6502" Version="0.26.2-alpha" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\C64Util\C64Util.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,6 +46,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="kernal.bin">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="My Project\Application.myapp">
       <Generator>MyApplicationCodeGenerator</Generator>
       <LastGenOutput>Application.Designer.vb</LastGenOutput>

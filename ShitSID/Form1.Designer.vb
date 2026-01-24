@@ -57,11 +57,14 @@ Partial Class Form1
         Button4 = New Button()
         Button5 = New Button()
         GroupBox3 = New GroupBox()
-        Label3 = New Label()
         NumericUpDown5 = New NumericUpDown()
+        Label3 = New Label()
         Button6 = New Button()
         CheckBox8 = New CheckBox()
         GroupBox4 = New GroupBox()
+        NumericUpDown6 = New NumericUpDown()
+        Label7 = New Label()
+        Label8 = New Label()
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox1.SuspendLayout()
         CType(NumericUpDown2, ComponentModel.ISupportInitialize).BeginInit()
@@ -71,6 +74,7 @@ Partial Class Form1
         GroupBox3.SuspendLayout()
         CType(NumericUpDown5, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox4.SuspendLayout()
+        CType(NumericUpDown6, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' Button1
@@ -187,7 +191,7 @@ Partial Class Form1
         ' CheckBox5
         ' 
         CheckBox5.AutoSize = True
-        CheckBox5.Location = New Point(159, 165)
+        CheckBox5.Location = New Point(162, 218)
         CheckBox5.Margin = New Padding(3, 2, 3, 2)
         CheckBox5.Name = "CheckBox5"
         CheckBox5.Size = New Size(101, 19)
@@ -397,34 +401,34 @@ Partial Class Form1
         ' 
         ' GroupBox3
         ' 
-        GroupBox3.Controls.Add(Label3)
         GroupBox3.Controls.Add(NumericUpDown5)
+        GroupBox3.Controls.Add(Label3)
         GroupBox3.Controls.Add(Button6)
-        GroupBox3.Location = New Point(159, 188)
+        GroupBox3.Location = New Point(277, 188)
         GroupBox3.Name = "GroupBox3"
-        GroupBox3.Size = New Size(356, 54)
+        GroupBox3.Size = New Size(238, 54)
         GroupBox3.TabIndex = 18
         GroupBox3.TabStop = False
         GroupBox3.Text = "Export controls"
         ' 
+        ' NumericUpDown5
+        ' 
+        NumericUpDown5.Location = New Point(162, 24)
+        NumericUpDown5.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
+        NumericUpDown5.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
+        NumericUpDown5.Name = "NumericUpDown5"
+        NumericUpDown5.Size = New Size(70, 23)
+        NumericUpDown5.TabIndex = 1
+        NumericUpDown5.Value = New Decimal(New Integer() {60, 0, 0, 0})
+        ' 
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(87, 26)
+        Label3.Location = New Point(85, 26)
         Label3.Name = "Label3"
         Label3.Size = New Size(77, 15)
         Label3.TabIndex = 2
         Label3.Text = "Export length"
-        ' 
-        ' NumericUpDown5
-        ' 
-        NumericUpDown5.Location = New Point(170, 24)
-        NumericUpDown5.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
-        NumericUpDown5.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
-        NumericUpDown5.Name = "NumericUpDown5"
-        NumericUpDown5.Size = New Size(103, 23)
-        NumericUpDown5.TabIndex = 1
-        NumericUpDown5.Value = New Decimal(New Integer() {60, 0, 0, 0})
         ' 
         ' Button6
         ' 
@@ -459,11 +463,40 @@ Partial Class Form1
         GroupBox4.TabStop = False
         GroupBox4.Text = "Channels"
         ' 
+        ' NumericUpDown6
+        ' 
+        NumericUpDown6.Location = New Point(157, 183)
+        NumericUpDown6.Name = "NumericUpDown6"
+        NumericUpDown6.Size = New Size(94, 23)
+        NumericUpDown6.TabIndex = 13
+        NumericUpDown6.Value = New Decimal(New Integer() {50, 0, 0, 0})
+        ' 
+        ' Label7
+        ' 
+        Label7.AutoSize = True
+        Label7.Location = New Point(156, 165)
+        Label7.Name = "Label7"
+        Label7.Size = New Size(55, 15)
+        Label7.TabIndex = 21
+        Label7.Text = "Tick rate:"
+        ' 
+        ' Label8
+        ' 
+        Label8.AutoSize = True
+        Label8.Location = New Point(253, 187)
+        Label8.Name = "Label8"
+        Label8.Size = New Size(21, 15)
+        Label8.TabIndex = 22
+        Label8.Text = "Hz"
+        ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(521, 246)
+        Controls.Add(Label8)
+        Controls.Add(Label7)
+        Controls.Add(NumericUpDown6)
         Controls.Add(GroupBox4)
         Controls.Add(GroupBox3)
         Controls.Add(Button5)
@@ -496,6 +529,7 @@ Partial Class Form1
         CType(NumericUpDown5, ComponentModel.ISupportInitialize).EndInit()
         GroupBox4.ResumeLayout(False)
         GroupBox4.PerformLayout()
+        CType(NumericUpDown6, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -538,5 +572,8 @@ Partial Class Form1
     Friend WithEvents RadioButton5 As RadioButton
     Friend WithEvents RadioButton4 As RadioButton
     Friend WithEvents RadioButton3 As RadioButton
+    Friend WithEvents NumericUpDown6 As NumericUpDown
+    Friend WithEvents Label7 As Label
+    Friend WithEvents Label8 As Label
 
 End Class

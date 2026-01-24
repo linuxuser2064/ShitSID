@@ -38,9 +38,7 @@ Public Class Form1
     Private Sub LoadSID()
         ' Reinitialize components
         sid = New ShitSID(SAMPLERATE)
-        cpu = New CPU()
-        mem = New Memory()
-        cpu.SP = 2
+        cpu.SP = 1
         mem(1) = &H37
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
         If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
@@ -73,12 +71,11 @@ Public Class Form1
         CheckBox6_CheckedChanged(Nothing, Nothing)
         cpu.PC = sidfile.InitAddress
         Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
-        provider = New SidAudioProvider(sid, SAMPLERATE)
         If CheckBox5.Checked Then
-            provider.UseNTSC = True
-        Else
-            provider.UseNTSC = False
+            NumericUpDown6.Value = 60
         End If
+        provider = New SidAudioProvider(sid, cpu, mem, SAMPLERATE)
+        provider.TickRate = NumericUpDown6.Value
     End Sub
     Public Sub PlaySID()
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
@@ -151,10 +148,11 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     Private Sub CheckBox5_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox5.CheckedChanged
         If sid IsNot Nothing Then
             If CheckBox5.Checked Then
-                provider.UseNTSC = True
+                NumericUpDown6.Value = 60
             Else
-                provider.UseNTSC = False
+                NumericUpDown6.Value = 50
             End If
+            provider.TickRate = NumericUpDown6.Value
         End If
     End Sub
 
@@ -236,7 +234,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         End If
         Console.WriteLine("Init MF...")
         MediaFoundationApi.Startup()
-        ' NOT TESTED
+        ' NOT TESTED (PS it works)
         Console.WriteLine("Loading SID...")
         LoadSID()
         provider.sidfile = sidfile
@@ -270,6 +268,12 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             If RadioButton5.Checked Then
                 sid.FilterCurve = ShitSID.FilterCurveType.Bright
             End If
+        End If
+    End Sub
+
+    Private Sub NumericUpDown6_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown6.ValueChanged
+        If sid IsNot Nothing Then
+            provider.TickRate = NumericUpDown6.Value
         End If
     End Sub
 End Class
