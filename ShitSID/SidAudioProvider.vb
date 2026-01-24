@@ -12,7 +12,7 @@ Public Class SidAudioProvider
     Private ReadOnly vWaveFormat As WaveFormat
     Private sidPhase As Double = 0
     Private Const SID_CLOCK_RATE As Double = 985248.0 ' PAL clock in Hz
-    Dim cpuClockPhase = 881
+    Dim cpuClockPhase = 1
     Dim playAddr As UShort
     Dim TimerLoByte As Byte = 0
     Dim TimerHiByte As Byte = 0
@@ -23,8 +23,11 @@ Public Class SidAudioProvider
     Public UseNTSC As Boolean = False
     Dim NMIVec As UShort = 0
     Public runCPU As Boolean = False
-    Public Sub New(sidEmu As ShitSID, Optional sampleRateHz As Integer = 44100)
+    Public TickRate As Integer
+    Public Sub New(ByRef sidEmu As ShitSID, ByRef cpuV As CPU, ByRef memV As Memory, Optional sampleRateHz As Integer = 44100)
         sid = sidEmu
+        cpu = cpuV
+        mem = memV
         sampleRate = sampleRateHz
         vWaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRateHz, 1)
     End Sub
@@ -92,7 +95,7 @@ Public Class SidAudioProvider
             sidPhase += (SID_CLOCK_RATE / sampleRate)
             cpuClockPhase += 1
 
-            If cpuClockPhase >= If(UseNTSC, (sampleRate \ 60) - 1, (sampleRate \ 50) - 1) AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)
+            If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)
                 ' fake interrupt
                 cpu.PushWordToStack(cpu.PC, mem)
                 cpu.PushByteToStack(0, mem) ' fuck da flags this is purely for stack alignment
