@@ -3,9 +3,8 @@ A SID emulator written in Visual Basic.
 
 # Features
 - Basic waveform emulation
-- Partial mixed waveform support
-- Duty cycle support on pulse wave
-- Special 4-bit duty cycle mode for extra crustiness
+- Mixed waveform support
+- Special 4-bit duty cycle mode
 - SID pseudo-exponential ADSR (code conversion from reSIDfp)
 - Filter emulation with switchable 8580 and 6581 modes
 - Dark, average, and bright filter curves for 6581 mode.
@@ -21,6 +20,7 @@ A SID emulator written in Visual Basic.
 # Issues
 - Chris Hülsbeck's songs that use samples do not play.
 - Martin Galway's songs that use samples do not play.
+- Probably more
 
 # Usage
 To load and play a .SID file, press "Load SID file".
