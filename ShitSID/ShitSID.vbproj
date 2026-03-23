@@ -18,6 +18,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="LoreAccurate6581\**" />
+    <EmbeddedResource Remove="LoreAccurate6581\**" />
+    <None Remove="LoreAccurate6581\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="ShitSID_icon.ico" />
   </ItemGroup>
 

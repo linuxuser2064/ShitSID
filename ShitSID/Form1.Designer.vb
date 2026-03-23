@@ -466,6 +466,8 @@ Partial Class Form1
         ' NumericUpDown6
         ' 
         NumericUpDown6.Location = New Point(157, 183)
+        NumericUpDown6.Maximum = New Decimal(New Integer() {960, 0, 0, 0})
+        NumericUpDown6.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
         NumericUpDown6.Name = "NumericUpDown6"
         NumericUpDown6.Size = New Size(94, 23)
         NumericUpDown6.TabIndex = 13

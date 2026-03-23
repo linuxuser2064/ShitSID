@@ -76,6 +76,7 @@ Public Class Form1
         End If
         provider = New SidAudioProvider(sid, cpu, mem, SAMPLERATE)
         provider.TickRate = NumericUpDown6.Value
+        provider.UseNTSC = CheckBox5.Checked
     End Sub
     Public Sub PlaySID()
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
@@ -153,6 +154,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
                 NumericUpDown6.Value = 50
             End If
             provider.TickRate = NumericUpDown6.Value
+            provider.UseNTSC = CheckBox5.Checked
         End If
     End Sub
 
@@ -272,8 +274,17 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     End Sub
 
     Private Sub NumericUpDown6_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown6.ValueChanged
-        If sid IsNot Nothing Then
+        If sid IsNot Nothing AndAlso provider IsNot Nothing Then
             provider.TickRate = NumericUpDown6.Value
         End If
+    End Sub
+    Dim r As New Random
+    Private Sub Label2_DoubleClick(sender As Object, e As EventArgs) Handles Label2.DoubleClick
+        Console.WriteLine("destabilize")
+        AddHandler provider.cpu.InstructionExecuted, Sub(s As Object, es As CPUInstructionExecutedEventArgs)
+                                                         ' any and all things on the stack will be replaced with the instruction byte
+                                                         es.CPU.PopByteFromStack(es.Mem)
+                                                         es.CPU.PushByteToStack(es.InstructionExecState.LastInstructionExecResult.OpCodeByte, es.Mem)
+                                                     End Sub
     End Sub
 End Class

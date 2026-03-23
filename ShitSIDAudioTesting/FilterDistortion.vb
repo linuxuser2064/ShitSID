@@ -14,6 +14,7 @@
         filt.Reset()
         filt.SetCutoff(Cutoff)
         filt.SetResonance(Resonance)
+        filt.ResonanceDivider = 2
         Dim waveForm(768) As Double
         For i = 0 To 767
             waveForm(i) = -1
@@ -24,7 +25,7 @@
         Dim OutputWaveForm(768) As Double
         ' pass 1
         For i = 0 To 767
-            OutputWaveForm(i) = filt.ApplyFilter(waveForm(i))
+            filt.ApplyFilter(waveForm(i))
         Next
         ' pass 2
         g.Clear(Color.Black)
@@ -33,7 +34,7 @@
             Dim y = filt.Clamp((-OutputWaveForm(i) * 225) + 384, 0, 767)
             Dim prevY = filt.Clamp((-OutputWaveForm(Math.Max(i - 1, 0)) * 225) + 384, 0, 767)
             'ImgBuf.SetPixel(i, y, Color.White)
-            g.DrawLine(New Pen(Color.White, 2), i, CInt(y), i - 1, CInt(prevY))
+            g.DrawLine(New Pen(Color.White, 2), i - 1, CInt(Math.Floor(y)), i, CInt(Math.Floor(prevY)))
         Next
         PictureBox1.Invalidate()
     End Sub
@@ -130,6 +131,7 @@ Public Class SIDFilter
         If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
         If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
         If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
+
 
         output = (Math.Tanh((output * distortionMult) + distortionOffset) - distortionOffset) / distortionMult
 

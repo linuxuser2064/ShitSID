@@ -11,7 +11,9 @@ Public Class SidAudioProvider
     Private ReadOnly sampleRate As Integer
     Private ReadOnly vWaveFormat As WaveFormat
     Private sidPhase As Double = 0
-    Private Const SID_CLOCK_RATE As Double = 985248.0 ' PAL clock in Hz
+    Private Const SID_CLOCK_RATE_NTSC As Double = 1022727.0 ' PAL clock in Hz
+    Private Const SID_CLOCK_RATE_PAL As Double = 985248.0 ' PAL clock in Hz
+    Private SIDClockRate As Integer = SID_CLOCK_RATE_PAL
     Dim cpuClockPhase = 1
     Dim playAddr As UShort
     Dim TimerLoByte As Byte = 0
@@ -20,7 +22,16 @@ Public Class SidAudioProvider
     Dim TimerActive As Boolean = False
     Dim TimerTrigger As Boolean = False
     Dim TimerPhase As UShort = 0
-    Public UseNTSC As Boolean = False
+    Private NTSCOn As Boolean = False
+    Public Property UseNTSC() As Boolean
+        Get
+            Return NTSCOn
+        End Get
+        Set(ByVal value As Boolean)
+            NTSCOn = value
+            If value Then SIDClockRate = SID_CLOCK_RATE_NTSC Else SIDClockRate = SID_CLOCK_RATE_PAL
+        End Set
+    End Property
     Dim NMIVec As UShort = 0
     Public runCPU As Boolean = False
     Public TickRate As Integer
@@ -87,12 +98,12 @@ Public Class SidAudioProvider
         Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
         NMIVec = BitConverter.ToUInt16({mem(65530), mem(65531)})
         Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
-        cpuClockPhase = If(UseNTSC, (sampleRate \ 60) - 1, (sampleRate \ 50) - 1)
+        cpuClockPhase = sampleRate \ TickRate - 1
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
         For i = 0 To count - 1
             ' --- clock the SID phase ---
-            sidPhase += (SID_CLOCK_RATE / sampleRate)
+            sidPhase += (SIDClockRate / sampleRate)
             cpuClockPhase += 1
 
             If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)

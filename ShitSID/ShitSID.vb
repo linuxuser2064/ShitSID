@@ -1,4 +1,5 @@
 ﻿Imports NAudio.Wave
+Imports NAudio.Wave.SampleProviders
 Imports System
 Public Class ShitSID
     Enum FilterCurveType
@@ -9,7 +10,7 @@ Public Class ShitSID
     Public Voices(2) As Voice
 
     Public SampleRate As Int32 = 44100
-    Public CurrentTime As Double = 0
+    Public CurrentTime As System.Decimal = 0
 
     Public Filter As SIDFilter
     Public FilterCurve As FilterCurveType = FilterCurveType.Average
@@ -30,15 +31,21 @@ Public Class ShitSID
     Public InternalAudioFilter As Boolean = True
 
     Const ClocksPerFrame = 985248.0
+
+    Dim SIDRegisters(31) As Byte
     Public Sub New(Optional samplerate As Int32 = 44100)
         Me.SampleRate = samplerate
         Filter = New SIDFilter(Me, samplerate)
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
+            SIDRegisters(i) = 0
+        Next
+        For i = 3 To 31 ' holy cycle saving
+            SIDRegisters(i) = 0
         Next
     End Sub
     Public Sub Clock()
-        currentTime += 1.0 / ClocksPerFrame
+        CurrentTime += 1.0 / ClocksPerFrame
         For i = 0 To 2
             Voices(i).Envelope.Clock()
         Next
@@ -61,8 +68,8 @@ Public Class ShitSID
         Dim filterInput As Double = 0
         For i = 0 To 2
             Dim v = Voices(i)
-            Dim generated = v.Generate(currentTime) ' generate anyway for ringmod accuracy
-            If v.UseFilter AndAlso bypassFilter = False Then
+            Dim generated = v.Generate(CurrentTime) ' generate anyway for ringmod accuracy
+            If v.UseFilter AndAlso BypassFilter = False Then
                 filterInput += generated
             Else
                 If MuteVoice3 AndAlso i = 2 Then
@@ -71,7 +78,7 @@ Public Class ShitSID
                 End If
             End If
         Next
-        If Not bypassFilter Then
+        If Not BypassFilter Then
             output += Filter.ApplyFilter(filterInput)
         End If
         If Not MuteSamples Then
@@ -100,6 +107,7 @@ Public Class ShitSID
         End Select
     End Function
     Public Sub WriteRegister(addr As Integer, value As Byte)
+        SIDRegisters(addr - &HD400) = value
         'Console.WriteLine($"SID Write {addr.ToString("X4")} to {value.ToString("X2")}")
         ' Handle register writes immediately
         Select Case addr
@@ -191,7 +199,6 @@ Public Class ShitSID
         If (filterMode And 1) <> 0 Then mode = mode Or SIDFilter.EFilterType.LowPass
         If (filterMode And 2) <> 0 Then mode = mode Or SIDFilter.EFilterType.BandPass
         If (filterMode And 4) <> 0 Then mode = mode Or SIDFilter.EFilterType.HighPass
-
         Filter.SetFilterType(mode)
     End Sub
     Public Sub Reset()
@@ -206,7 +213,7 @@ Public Class Voice
     Private lfsr As New SidNoiseLFSR
     Public MuteVoice As Boolean = False
     Public LoFiDuty As Boolean = False
-    Public Frequency As Double = 440.0
+    Public Frequency As Double = 0
     Public FreqLo As Byte
     Public FreqHi As Byte
     Public Control As Byte
@@ -223,6 +230,7 @@ Public Class Voice
     Private phase As Double = 0.0
     Private lastTime As Double = 0.0
     Private prevMasterMSB As Boolean = False
+    ' 24-bit accumulator for SID-accurate phase timing
     Public Sub New(parent As ShitSID, i As Int32)
         Me.Parent = parent
         Me.Index = i
@@ -241,8 +249,12 @@ Public Class Voice
 
     ' SID pitch formula: freq = (fregval * clock) / 16777216
     Public Sub UpdateFrequency()
-        Dim freqVal = (CUInt(FreqHi) << 8) Or FreqLo
-        Frequency = freqVal * 985248.0 / 16777216.0
+
+        Dim NewFreqHi As Byte = FreqHi
+        Dim NewFreqLo As Byte = FreqLo
+        Dim freqVal = (CUInt(NewFreqHi) << 8) Or CUInt(NewFreqLo)
+        Dim actualFrequency = freqVal * 985248.0 / 16777216.0
+        Frequency = actualFrequency
         'Frequency = Math.Round(Frequency / 10) * 10
     End Sub
     Public Function GenerateNoEnvelope(time As Double) As Double
@@ -264,7 +276,7 @@ Public Class Voice
         phase += newFrequency * deltaTime
         phase = phase Mod 1.0
 
-        ' new 12 bit accumulator
+        ' new 12 bit phase
         Dim acc As Integer = CInt(phase * &HFFF) ' 3 nybbles looks cursed
         ' sid accurate waveform generation
         Dim sawVal As Integer = acc
@@ -272,7 +284,7 @@ Public Class Voice
         If (acc And &H800) <> 0 Then ' MSB is bit 11
             triVal = triVal Xor &HFFF
         End If
-        Dim pulseVal As Integer = If(acc < DutyCycle * &HFFF, &HFFF, 0)
+        Dim pulseVal As Integer = If(acc > DutyCycle * &HFFF, &HFFF, 0)
 
         Dim dacInput As Integer = 0
         Select Case Waveform
@@ -598,7 +610,6 @@ Public Class SIDFilter
         BandPass = 2
         HighPass = 4
     End Enum
-
     Public Mode6581 As Boolean = False
     Public parent As ShitSID
     Private filterType As EFilterType = EFilterType.LowPass

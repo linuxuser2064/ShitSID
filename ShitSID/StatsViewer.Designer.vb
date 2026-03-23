@@ -23,6 +23,7 @@ Partial Class StatsViewer
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         components = New ComponentModel.Container()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(StatsViewer))
         Label1 = New Label()
         Timer1 = New Timer(components)
         TableLayoutPanel1 = New TableLayoutPanel()
@@ -44,9 +45,9 @@ Partial Class StatsViewer
         ' 
         Label1.Dock = DockStyle.Fill
         Label1.Font = New Font("Consolas", 9F)
-        Label1.Location = New Point(3, 23)
+        Label1.Location = New Point(3, 18)
         Label1.Name = "Label1"
-        Label1.Size = New Size(564, 268)
+        Label1.Size = New Size(424, 212)
         Label1.TabIndex = 0
         Label1.Text = "Label1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         ' 
@@ -66,20 +67,23 @@ Partial Class StatsViewer
         TableLayoutPanel1.Controls.Add(GroupBox1, 0, 0)
         TableLayoutPanel1.Dock = DockStyle.Fill
         TableLayoutPanel1.Location = New Point(0, 0)
+        TableLayoutPanel1.Margin = New Padding(3, 2, 3, 2)
         TableLayoutPanel1.Name = "TableLayoutPanel1"
         TableLayoutPanel1.RowCount = 2
         TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 50F))
         TableLayoutPanel1.RowStyles.Add(New RowStyle(SizeType.Percent, 50F))
-        TableLayoutPanel1.Size = New Size(1153, 601)
+        TableLayoutPanel1.Size = New Size(872, 472)
         TableLayoutPanel1.TabIndex = 1
         ' 
         ' GroupBox4
         ' 
         GroupBox4.Controls.Add(Label4)
         GroupBox4.Dock = DockStyle.Fill
-        GroupBox4.Location = New Point(579, 303)
+        GroupBox4.Location = New Point(439, 238)
+        GroupBox4.Margin = New Padding(3, 2, 3, 2)
         GroupBox4.Name = "GroupBox4"
-        GroupBox4.Size = New Size(571, 295)
+        GroupBox4.Padding = New Padding(3, 2, 3, 2)
+        GroupBox4.Size = New Size(430, 232)
         GroupBox4.TabIndex = 5
         GroupBox4.TabStop = False
         GroupBox4.Text = "Voice 3"
@@ -88,9 +92,9 @@ Partial Class StatsViewer
         ' 
         Label4.Dock = DockStyle.Fill
         Label4.Font = New Font("Consolas", 9F)
-        Label4.Location = New Point(3, 23)
+        Label4.Location = New Point(3, 18)
         Label4.Name = "Label4"
-        Label4.Size = New Size(565, 269)
+        Label4.Size = New Size(424, 212)
         Label4.TabIndex = 0
         Label4.Text = "Label4"
         ' 
@@ -98,9 +102,11 @@ Partial Class StatsViewer
         ' 
         GroupBox3.Controls.Add(Label3)
         GroupBox3.Dock = DockStyle.Fill
-        GroupBox3.Location = New Point(3, 303)
+        GroupBox3.Location = New Point(3, 238)
+        GroupBox3.Margin = New Padding(3, 2, 3, 2)
         GroupBox3.Name = "GroupBox3"
-        GroupBox3.Size = New Size(570, 295)
+        GroupBox3.Padding = New Padding(3, 2, 3, 2)
+        GroupBox3.Size = New Size(430, 232)
         GroupBox3.TabIndex = 4
         GroupBox3.TabStop = False
         GroupBox3.Text = "Voice 2"
@@ -109,9 +115,9 @@ Partial Class StatsViewer
         ' 
         Label3.Dock = DockStyle.Fill
         Label3.Font = New Font("Consolas", 9F)
-        Label3.Location = New Point(3, 23)
+        Label3.Location = New Point(3, 18)
         Label3.Name = "Label3"
-        Label3.Size = New Size(564, 269)
+        Label3.Size = New Size(424, 212)
         Label3.TabIndex = 0
         Label3.Text = "Label3"
         ' 
@@ -119,9 +125,11 @@ Partial Class StatsViewer
         ' 
         GroupBox2.Controls.Add(Label2)
         GroupBox2.Dock = DockStyle.Fill
-        GroupBox2.Location = New Point(579, 3)
+        GroupBox2.Location = New Point(439, 2)
+        GroupBox2.Margin = New Padding(3, 2, 3, 2)
         GroupBox2.Name = "GroupBox2"
-        GroupBox2.Size = New Size(571, 294)
+        GroupBox2.Padding = New Padding(3, 2, 3, 2)
+        GroupBox2.Size = New Size(430, 232)
         GroupBox2.TabIndex = 3
         GroupBox2.TabStop = False
         GroupBox2.Text = "Voice 1"
@@ -130,9 +138,9 @@ Partial Class StatsViewer
         ' 
         Label2.Dock = DockStyle.Fill
         Label2.Font = New Font("Consolas", 9F)
-        Label2.Location = New Point(3, 23)
+        Label2.Location = New Point(3, 18)
         Label2.Name = "Label2"
-        Label2.Size = New Size(565, 268)
+        Label2.Size = New Size(424, 212)
         Label2.TabIndex = 0
         Label2.Text = "Label2"
         ' 
@@ -140,20 +148,24 @@ Partial Class StatsViewer
         ' 
         GroupBox1.Controls.Add(Label1)
         GroupBox1.Dock = DockStyle.Fill
-        GroupBox1.Location = New Point(3, 3)
+        GroupBox1.Location = New Point(3, 2)
+        GroupBox1.Margin = New Padding(3, 2, 3, 2)
         GroupBox1.Name = "GroupBox1"
-        GroupBox1.Size = New Size(570, 294)
+        GroupBox1.Padding = New Padding(3, 2, 3, 2)
+        GroupBox1.Size = New Size(430, 232)
         GroupBox1.TabIndex = 2
         GroupBox1.TabStop = False
         GroupBox1.Text = "Global"
         ' 
         ' StatsViewer
         ' 
-        AutoScaleDimensions = New SizeF(8F, 20F)
+        AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         BackColor = Color.White
-        ClientSize = New Size(1153, 601)
+        ClientSize = New Size(872, 472)
         Controls.Add(TableLayoutPanel1)
+        Icon = CType(resources.GetObject("$this.Icon"), Icon)
+        Margin = New Padding(3, 2, 3, 2)
         Name = "StatsViewer"
         Text = "Statistics"
         TableLayoutPanel1.ResumeLayout(False)
