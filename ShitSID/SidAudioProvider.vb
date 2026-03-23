@@ -8,6 +8,8 @@ Public Class SidAudioProvider
     Public sidfile As SidFile
     Public cpu As New CPU
     Public mem As New Memory(65536)
+    Public psgView As PSGView
+    Public Event PSGViewFrame(frame As Bitmap)
     Private ReadOnly sampleRate As Integer
     Private ReadOnly vWaveFormat As WaveFormat
     Private sidPhase As Double = 0
@@ -35,11 +37,12 @@ Public Class SidAudioProvider
     Dim NMIVec As UShort = 0
     Public runCPU As Boolean = False
     Public TickRate As Integer
-    Public Sub New(ByRef sidEmu As ShitSID, ByRef cpuV As CPU, ByRef memV As Memory, Optional sampleRateHz As Integer = 44100)
+    Public Sub New(ByRef sidEmu As ShitSID, ByRef cpuV As CPU, ByRef memV As Memory, ByRef PSGView As PSGView, Optional sampleRateHz As Integer = 44100)
         sid = sidEmu
         cpu = cpuV
         mem = memV
         sampleRate = sampleRateHz
+        Me.psgView = PSGView
         vWaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRateHz, 1)
     End Sub
     Public Sub InitSIDFile()
@@ -112,6 +115,7 @@ Public Class SidAudioProvider
                 cpu.PushByteToStack(0, mem) ' fuck da flags this is purely for stack alignment
                 cpu.PC = playAddr
                 cpuClockPhase = 0
+                RaiseEvent PSGViewFrame(psgView.Frame)
             End If
 
             ' --- advance SID phase while handling CPU ---

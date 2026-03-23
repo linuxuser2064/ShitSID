@@ -11,7 +11,10 @@ Public Class Form1
     Dim delayMS = 20 ' this does not work
     Public mem As New Memory(65536)
     Private waveOut As WasapiOut = Nothing
-    Private provider As SidAudioProvider = Nothing
+    Private WithEvents provider As SidAudioProvider = Nothing
+    Private PSGViewTimer As AccurateTimer
+    Private PSGViewer As PSGView
+    Private PSGViewForm As New PSGViewForm
     ' QueryPerformanceCounter (import from Windows API)
     <DllImport("kernel32.dll", CharSet:=CharSet.Auto)>
     Public Shared Function QueryPerformanceCounter(ByRef lpPerformanceCount As Long) As Boolean
@@ -37,6 +40,10 @@ Public Class Form1
     Public fakeClockCount = 0
     Private Sub LoadSID()
         ' Reinitialize components
+        If PSGViewTimer IsNot Nothing Then
+            PSGViewTimer.Stop()
+            PSGViewTimer.Dispose()
+        End If
         sid = New ShitSID(SAMPLERATE)
         cpu.SP = 1
         mem(1) = &H37
@@ -74,8 +81,10 @@ Public Class Form1
         If CheckBox5.Checked Then
             NumericUpDown6.Value = 60
         End If
-        provider = New SidAudioProvider(sid, cpu, mem, SAMPLERATE)
+        PSGViewer = New PSGView(sid)
+        provider = New SidAudioProvider(sid, cpu, mem, PSGViewer, SAMPLERATE)
         provider.TickRate = NumericUpDown6.Value
+        'PSGViewTimer = New AccurateTimer(NumericUpDown6.Value, AddressOf PSGViewTick)
         provider.UseNTSC = CheckBox5.Checked
     End Sub
     Public Sub PlaySID()
@@ -84,6 +93,7 @@ Public Class Form1
         provider.InitSIDFile()
         waveOut.Init(provider)
         waveOut.Play()
+        'PSGViewTimer.Start()
         provider.runCPU = True
         For Each x As Control In Me.Controls
             x.Enabled = True
@@ -280,11 +290,19 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     End Sub
     Dim r As New Random
     Private Sub Label2_DoubleClick(sender As Object, e As EventArgs) Handles Label2.DoubleClick
-        Console.WriteLine("destabilize")
-        AddHandler provider.cpu.InstructionExecuted, Sub(s As Object, es As CPUInstructionExecutedEventArgs)
-                                                         ' any and all things on the stack will be replaced with the instruction byte
-                                                         es.CPU.PopByteFromStack(es.Mem)
-                                                         es.CPU.PushByteToStack(es.InstructionExecState.LastInstructionExecResult.OpCodeByte, es.Mem)
-                                                     End Sub
+        PSGViewForm.Show()
+    End Sub
+    Private Sub PSGViewTick()
+        'If PSGViewForm.Visible Then
+        'End If
+    End Sub
+
+    Private Sub provider_PSGViewFrame(frame As Bitmap) Handles provider.PSGViewFrame
+        If (Not PSGViewForm.IsDisposed) AndAlso PSGViewForm.Visible Then
+            PSGViewForm.Invoke(
+                Sub()
+                    FastBitmapRenderer.RenderBitmapStretched(PSGViewForm.Handle, frame, 0, 0, New Drawing.Size(512, 512))
+                End Sub)
+        End If
     End Sub
 End Class
