@@ -245,7 +245,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         Dim wavProv As New MediaFoundationEncoder(type)
         wavProv.DefaultReadBufferSize = SAMPLERATE \ NumericUpDown6.Value
         Console.WriteLine("Creating video container...")
-        Dim opts = New VideoEncoderSettings(512, 512, NumericUpDown6.Value, VideoCodec.H264) With {.Bitrate = 2500 * 1000, .EncoderPreset = EncoderPreset.Faster}
+        Dim opts = New VideoEncoderSettings(512, 512, NumericUpDown6.Value, VideoCodec.H264) With {.Bitrate = 3200 * 1000, .EncoderPreset = EncoderPreset.Faster}
         opts.CodecOptions("profile") = "high444"
         opts.CodecOptions("pix_fmt") = "yuv444p"
         opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444

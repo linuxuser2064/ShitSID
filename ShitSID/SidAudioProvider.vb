@@ -25,6 +25,9 @@ Public Class SidAudioProvider
     Dim TimerActive As Boolean = False
     Dim TimerTrigger As Boolean = False
     Dim TimerPhase As UShort = 0
+    Dim volumebuf As New List(Of Byte)
+    Dim volphase As Integer = 0
+    Const voldivider As Integer = 16
     Private NTSCOn As Boolean = False
     Public Property UseNTSC() As Boolean
         Get
@@ -121,7 +124,7 @@ Public Class SidAudioProvider
                 cpu.PushByteToStack(0, mem) ' fuck da flags this is purely for stack alignment
                 cpu.PC = playAddr
                 cpuClockPhase -= (sampleRate \ TickRate)
-                RaiseEvent PSGViewFrame(psgView.Frame(2))
+                RaiseEvent PSGViewFrame(psgView.Frame(volumebuf.ToArray, 2))
             End If
 
             ' --- advance SID phase while handling CPU ---
@@ -153,6 +156,15 @@ Public Class SidAudioProvider
                     sidPhase -= 1
                 End If
             End While
+
+            volphase += 1
+            If volphase >= voldivider Then
+                volumebuf.Add(sid.VolumeRegister)
+                If volumebuf.Count > 128 Then
+                    volumebuf.RemoveAt(0)
+                End If
+                volphase = 0
+            End If
 
             ' --- write sample to buffer ---
             buffer(offset + i) = CSng(sid.GetSample * Volume) ' test

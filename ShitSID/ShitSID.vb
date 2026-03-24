@@ -177,7 +177,7 @@ Public Class ShitSID
                 ElseIf bits(5) Then
                     voice.Waveform = "saw"
                 ElseIf bits(6) Then
-                    voice.Waveform = "square"
+                    voice.Waveform = "pulse"
                 ElseIf bits(7) Then
                     voice.Waveform = "noise"
                 Else
@@ -218,7 +218,7 @@ Public Class Voice
     Public FreqLo As Byte
     Public FreqHi As Byte
     Public Control As Byte
-    Public Waveform As String = "square"
+    Public Waveform As String = "pulse"
     Public DutyCycle As Double = 0.5
     Public PulseWidthLo As Byte = 0
     Public PulseWidthHi As Byte = 0
@@ -293,7 +293,7 @@ Public Class Voice
                 dacInput = sawVal
             Case "tri"
                 dacInput = triVal
-            Case "square"
+            Case "pulse"
                 dacInput = pulseVal
             Case "noise"
                 Dim cycleDuration As Double = 1.0 / Frequency
