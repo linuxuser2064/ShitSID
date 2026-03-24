@@ -612,9 +612,9 @@ Public Class SIDFilter
     End Enum
     Public Mode6581 As Boolean = False
     Public parent As ShitSID
-    Private filterType As EFilterType = EFilterType.LowPass
-    Private resonance As Double = 0.0 ' 0.0 to 1.0
-    Private cutoffVal As Integer = 0          ' 0..2047 (11-bit)
+    Public filterType As EFilterType = EFilterType.LowPass
+    Public resonance As Double = 0.0 ' 0.0 to 1.0
+    Public cutoffVal As Integer = 0          ' 0..2047 (11-bit)
     Private sampleRate As Double = 44100.0
 
     ' State for your SVF path
@@ -648,7 +648,7 @@ Public Class SIDFilter
         filterType = ftype
     End Sub
 
-    Private Function InterpolatedCutoff() As Double
+    Public Function InterpolatedCutoff() As Double
         ' Keep your existing 6581/8580 curves for the SVF path
         If Mode6581 Then
             If parent.FilterCurve = ShitSID.FilterCurveType.Dark Then Return cutoffCurve6581Dark(cutoffVal).Item2
