@@ -1,13 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FFMediaToolkit" Version="4.8.1" />
     <PackageReference Include="Highbyte.DotNet6502" Version="0.26.2-alpha" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.14" />
   </ItemGroup>
 
 </Project>

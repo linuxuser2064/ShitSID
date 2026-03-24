@@ -1,0 +1,36 @@
+﻿using FFMediaToolkit.Encoding;
+using FFMediaToolkit.Graphics;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Drawing;
+using System.Drawing.Imaging;
+namespace BitmapToImageData
+{
+    public static class BMPtoBitmapData
+    {
+        public static void AddBitmapFrame(MediaOutput video, Bitmap bmp)
+        {
+            var rect = new Rectangle(Point.Empty, bmp.Size);
+            var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            try
+            {
+                var imgData = ImageData.FromPointer(data.Scan0, ImagePixelFormat.Bgr24, bmp.Size);
+                video.Video.AddFrame(imgData);
+            }
+            finally
+            {
+                bmp.UnlockBits(data);
+            }
+        }
+        public static void AddBitmapFrame(MediaOutput video, BitmapData data)
+        {
+                var imgData = ImageData.FromPointer(data.Scan0, ImagePixelFormat.Bgra32, new Size(data.Width, data.Height));
+                video.Video.AddFrame(imgData);
+        }
+        public static void AddBitmapFrame(MediaOutput video, BitmapData data, TimeSpan time)
+        {
+            var imgData = ImageData.FromPointer(data.Scan0, ImagePixelFormat.Bgra32, new Size(data.Width, data.Height));
+            video.Video.AddFrame(imgData, time);
+        }
+    }
+}

@@ -4,26 +4,21 @@ Imports System.IO
 Imports NAudio.CoreAudioApi
 Imports System.Runtime.InteropServices
 Imports NAudio.MediaFoundation
+Imports FFMediaToolkit.Decoding
+Imports FFMediaToolkit.Encoding
 Public Class Form1
-    Public SAMPLERATE = 88200
+    Public SAMPLERATE As Integer = 88200
     Public sid As ShitSID
+    Public sidfile As SidFile
+    Public fakeClockCount = 0
     Public cpu As New CPU
     Dim delayMS = 20 ' this does not work
     Public mem As New Memory(65536)
     Private waveOut As WasapiOut = Nothing
     Private WithEvents provider As SidAudioProvider = Nothing
-    Private PSGViewTimer As AccurateTimer
     Private PSGViewer As PSGView
     Private PSGViewForm As New PSGViewForm
-    ' QueryPerformanceCounter (import from Windows API)
-    <DllImport("kernel32.dll", CharSet:=CharSet.Auto)>
-    Public Shared Function QueryPerformanceCounter(ByRef lpPerformanceCount As Long) As Boolean
-    End Function
-
-    ' QueryPerformanceFrequency (import from Windows API)
-    <DllImport("kernel32.dll", CharSet:=CharSet.Auto)>
-    Public Shared Function QueryPerformanceFrequency(ByRef lpFrequency As Long) As Boolean
-    End Function
+    Private PSGViewFormHandle As IntPtr
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         If OpenFileDialog1.ShowDialog = DialogResult.OK Then
             ' if this dies im blaming chatgp
@@ -36,19 +31,13 @@ Public Class Form1
             PlaySID()
         End If
     End Sub
-    Public sidfile As SidFile
-    Public fakeClockCount = 0
     Private Sub LoadSID()
         ' Reinitialize components
-        If PSGViewTimer IsNot Nothing Then
-            PSGViewTimer.Stop()
-            PSGViewTimer.Dispose()
-        End If
         sid = New ShitSID(SAMPLERATE)
         cpu.SP = 1
         mem(1) = &H37
-        sidfile = SidFile.Load(OpenFileDialog1.FileName)
-        If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
+        SidFile = SidFile.Load(OpenFileDialog1.FileName)
+        If SidFile.FlagBits(2) = False AndAlso SidFile.FlagBits(3) = True Then
             mem(&H2A6) = 1 ' PAL
         End If
 
@@ -56,7 +45,7 @@ Public Class Form1
         If NumericUpDown1.Value > 0 Then
             cpu.A = NumericUpDown1.Value - 1
         Else
-            cpu.A = sidfile.StartSong - 1
+            cpu.A = SidFile.StartSong - 1
         End If
         sid.Voices(0).MuteVoice = CheckBox2.Checked
         sid.Voices(1).MuteVoice = CheckBox3.Checked
@@ -70,22 +59,24 @@ Public Class Form1
         sid.Filter.CutoffBias = NumericUpDown3.Value
         sid.Filter.CutoffMultiplier = NumericUpDown2.Value
         sid.Filter.ResonanceDivider = NumericUpDown4.Value
-        sid.bypassFilter = CheckBox7.Checked
+        sid.BypassFilter = CheckBox7.Checked
         sid.VolumeSampleMode = RadioButton1.Checked
         If RadioButton3.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Dark
         If RadioButton4.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Average
         If RadioButton5.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Bright
         CheckBox6_CheckedChanged(Nothing, Nothing)
-        cpu.PC = sidfile.InitAddress
-        Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
+        cpu.PC = SidFile.InitAddress
+        Console.WriteLine($"Init address: {SidFile.InitAddress.ToString("X4")}")
         If CheckBox5.Checked Then
             NumericUpDown6.Value = 60
         End If
         PSGViewer = New PSGView(sid)
         provider = New SidAudioProvider(sid, cpu, mem, PSGViewer, SAMPLERATE)
+        AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
         provider.TickRate = NumericUpDown6.Value
-        'PSGViewTimer = New AccurateTimer(NumericUpDown6.Value, AddressOf PSGViewTick)
         provider.UseNTSC = CheckBox5.Checked
+        PSGViewForm.Show()
+        PSGViewFormHandle = PSGViewForm.Handle
     End Sub
     Public Sub PlaySID()
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
@@ -195,10 +186,6 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         RadioButton4.Enabled = CheckBox6.Checked
         RadioButton5.Enabled = CheckBox6.Checked
     End Sub
-
-    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-    End Sub
-
     Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
 #If DEBUG Then
         Using fs As New FileStream("ramdump.bin", FileMode.Create, FileAccess.Write)
@@ -212,7 +199,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub CheckBox7_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox7.CheckedChanged
         If sid IsNot Nothing Then
-            sid.bypassFilter = CheckBox7.Checked
+            sid.BypassFilter = CheckBox7.Checked
         End If
     End Sub
 
@@ -239,36 +226,56 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             sid.Filter.CutoffMultiplier = NumericUpDown2.Value
         End If
     End Sub
-
+    Dim stamp As New TimeSpan
     Private Sub Button6_Click(sender As Object, e As EventArgs) Handles Button6.Click
         If Not OpenFileDialog1.ShowDialog = DialogResult.OK Then
             Exit Sub
         End If
         Console.WriteLine("Init MF...")
         MediaFoundationApi.Startup()
-        ' NOT TESTED (PS it works)
         Console.WriteLine("Loading SID...")
         LoadSID()
+        RemoveHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
+        AddHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
         provider.sidfile = sidfile
         provider.InitSIDFile()
         Console.WriteLine("Creating MediaType...")
         Dim type As New MediaType(provider.WaveFormat)
         Console.WriteLine("Creating MF encoder...")
-        Dim wavProv As New NAudio.Wave.MediaFoundationEncoder(type)
+        Dim wavProv As New MediaFoundationEncoder(type)
+        wavProv.DefaultReadBufferSize = SAMPLERATE \ NumericUpDown6.Value
+        Console.WriteLine("Creating video container...")
+        Dim opts = New VideoEncoderSettings(512, 512, NumericUpDown6.Value, VideoCodec.H264) With {.Bitrate = 2500 * 1000, .EncoderPreset = EncoderPreset.Faster}
+        opts.CodecOptions("profile") = "high444"
+        opts.CodecOptions("pix_fmt") = "yuv444p"
+        opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444
+        EncodeVid = MediaBuilder.CreateContainer("B:\source\repos\ShitSID\ShitSID\bin\Debug\net9.0-windows\output.mp4", ContainerFormat.MP4).
+            WithVideo(opts).Create
         Console.WriteLine("Encoding...")
         provider.runCPU = True
         wavProv.Encode("output.wav", provider.Take(TimeSpan.FromSeconds(NumericUpDown5.Value)).ToWaveProvider)
+        EncodeVid.Dispose()
         Console.WriteLine("Done")
-    End Sub
+        RemoveHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
+        AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
 
+    End Sub
+    Private EncodeVid As MediaOutput
+    Private Sub EncodeFrameHandler(frame As Bitmap)
+        Dim data = frame.LockBits(New Rectangle(0, 0, 512, 512), Imaging.ImageLockMode.ReadOnly, Imaging.PixelFormat.Format32bppArgb)
+        Try
+            Console.WriteLine($"Video time: {stamp.ToString}")
+            BitmapToImageData.BMPtoBitmapData.AddBitmapFrame(EncodeVid, data)
+            stamp = stamp.Add(TimeSpan.FromMilliseconds(1000 / provider.TickRate)) ' hardcoded ahh
+        Catch ex As Exception
+            Console.WriteLine(ex.ToString)
+        Finally
+            frame.UnlockBits(data)
+        End Try
+    End Sub
     Private Sub Button5_Click(sender As Object, e As EventArgs) Handles Button5.Click
         AudioOutputSettings.ShowDialog()
     End Sub
-
-    Private Sub CheckBox8_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox8.CheckedChanged
-
-    End Sub
-
     Private Sub RadioButton5_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton5.CheckedChanged, RadioButton4.CheckedChanged, RadioButton3.CheckedChanged
         If sid IsNot Nothing Then
             If RadioButton3.Checked Then
@@ -288,21 +295,11 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             provider.TickRate = NumericUpDown6.Value
         End If
     End Sub
-    Dim r As New Random
-    Private Sub Label2_DoubleClick(sender As Object, e As EventArgs) Handles Label2.DoubleClick
-        PSGViewForm.Show()
-    End Sub
-    Private Sub PSGViewTick()
-        'If PSGViewForm.Visible Then
-        'End If
-    End Sub
-
-    Private Sub provider_PSGViewFrame(frame As Bitmap) Handles provider.PSGViewFrame
-        If (Not PSGViewForm.IsDisposed) AndAlso PSGViewForm.Visible Then
-            PSGViewForm.Invoke(
-                Sub()
-                    FastBitmapRenderer.RenderBitmapStretched(PSGViewForm.Handle, frame, 0, 0, New Drawing.Size(512, 512))
-                End Sub)
-        End If
+    Private Sub provider_PSGViewFrame(frame As Bitmap)
+        If PSGViewForm Is Nothing Then Exit Sub
+        If PSGViewForm.IsDisposed Then Exit Sub
+        If Not PSGViewForm.Visible Then Exit Sub
+        FastBitmapRenderer.RenderBitmapOnForm(PSGViewFormHandle, frame, 0, 0)
+        'FastBitmapRenderer.RenderBitmapStretched(PSGViewFormHandle, frame, 0, 0, New Drawing.Size(512, 512))
     End Sub
 End Class

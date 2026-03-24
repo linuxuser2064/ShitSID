@@ -35,7 +35,7 @@ Public Class ShitSID
     Dim SIDRegisters(31) As Byte
     Public Sub New(Optional samplerate As Int32 = 44100)
         Me.SampleRate = samplerate
-        Filter = New SIDFilter(Me, samplerate)
+        Filter = New SIDFilter(Me, samplerate * 2) ' run double oversampling
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
             SIDRegisters(i) = 0
@@ -79,6 +79,7 @@ Public Class ShitSID
             End If
         Next
         If Not BypassFilter Then
+            Filter.ApplyFilter(filterInput) ' oversampling
             output += Filter.ApplyFilter(filterInput)
         End If
         If Not MuteSamples Then
@@ -673,6 +674,8 @@ Public Class SIDFilter
         Dim hp As Double = input - lowpass - q * bandpass
         Dim bp As Double = bandpass + f * hp
         Dim lp As Double = lowpass + f * bp
+        'lp = Math.Clamp(lp, -2, 2)
+        'bp = Math.Clamp(bp, -2, 2)
 
         highpass = hp
         bandpass = bp

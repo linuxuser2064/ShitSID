@@ -204,4 +204,49 @@ Public Class FastBitmapRenderer
         DeleteDC(memDC)
         ReleaseDC(handle, screenDC)
     End Sub
+    Public Shared Sub StretchBlitBitmapToBitmap(
+        srcBitmap As Bitmap,
+        destBitmap As Bitmap,
+        destX As Integer,
+        destY As Integer,
+        destWidth As Integer,
+        destHeight As Integer)
+
+        Dim srcDC As IntPtr = IntPtr.Zero
+        Dim srcHbm As IntPtr = IntPtr.Zero
+        Dim oldSrc As IntPtr = IntPtr.Zero
+
+        Dim g As Graphics = Nothing
+        Dim destDC As IntPtr = IntPtr.Zero
+
+        Try
+            ' Create source DC
+            srcDC = CreateCompatibleDC(IntPtr.Zero)
+            srcHbm = srcBitmap.GetHbitmap()
+            oldSrc = SelectObject(srcDC, srcHbm)
+
+            ' Get destination HDC from bitmap
+            g = Graphics.FromImage(destBitmap)
+            destDC = g.GetHdc()
+
+            'SetStretchBltMode(destDC, COLORONCOLOR)
+
+            StretchBlt(
+                destDC,
+                destX, destY, destWidth, destHeight,
+                srcDC,
+                0, 0, srcBitmap.Width, srcBitmap.Height,
+                SRCCOPY)
+
+        Finally
+            ' Cleanup
+            If destDC <> IntPtr.Zero Then g.ReleaseHdc(destDC)
+            If g IsNot Nothing Then g.Dispose()
+
+            If oldSrc <> IntPtr.Zero Then SelectObject(srcDC, oldSrc)
+            If srcHbm <> IntPtr.Zero Then DeleteObject(srcHbm)
+            If srcDC <> IntPtr.Zero Then DeleteDC(srcDC)
+        End Try
+
+    End Sub
 End Class

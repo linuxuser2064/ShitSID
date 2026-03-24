@@ -12,11 +12,12 @@ Public Class SidAudioProvider
     Public Event PSGViewFrame(frame As Bitmap)
     Private ReadOnly sampleRate As Integer
     Private ReadOnly vWaveFormat As WaveFormat
-    Private sidPhase As Double = 0
-    Private Const SID_CLOCK_RATE_NTSC As Double = 1022727.0 ' PAL clock in Hz
-    Private Const SID_CLOCK_RATE_PAL As Double = 985248.0 ' PAL clock in Hz
-    Private SIDClockRate As Integer = SID_CLOCK_RATE_PAL
-    Dim cpuClockPhase = 1
+    Private sidPhase As Long = 0
+    Private sidPhaseFrac As Double = 0.0
+    Private Const SID_CLOCK_RATE_NTSC As Long = 1022727 ' PAL clock in Hz
+    Private Const SID_CLOCK_RATE_PAL As Long = 985248 ' PAL clock in Hz
+    Private SIDClockRate As Long = SID_CLOCK_RATE_PAL
+    Dim cpuClockPhase As Long = 1
     Dim playAddr As UShort
     Dim TimerLoByte As Byte = 0
     Dim TimerHiByte As Byte = 0
@@ -104,9 +105,14 @@ Public Class SidAudioProvider
         cpuClockPhase = sampleRate \ TickRate - 1
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
+        Dim phaseIncrement As Double = SIDClockRate / sampleRate
+        'Console.WriteLine($"sidPhase: {sidPhase} - sidPhaseFrac: {sidPhaseFrac}")
         For i = 0 To count - 1
             ' --- clock the SID phase ---
-            sidPhase += (SIDClockRate / sampleRate)
+            sidPhaseFrac += phaseIncrement
+            Dim wholeCycles As Long = CLng(Math.Floor(sidPhaseFrac))
+            sidPhase += wholeCycles
+            sidPhaseFrac -= wholeCycles
             cpuClockPhase += 1
 
             If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)
@@ -114,8 +120,8 @@ Public Class SidAudioProvider
                 cpu.PushWordToStack(cpu.PC, mem)
                 cpu.PushByteToStack(0, mem) ' fuck da flags this is purely for stack alignment
                 cpu.PC = playAddr
-                cpuClockPhase = 0
-                RaiseEvent PSGViewFrame(psgView.Frame)
+                cpuClockPhase -= (sampleRate \ TickRate)
+                RaiseEvent PSGViewFrame(psgView.Frame(2))
             End If
 
             ' --- advance SID phase while handling CPU ---

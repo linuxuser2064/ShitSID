@@ -126,4 +126,10 @@ CommonFont, Brushes.White, cX(137), cY(44 + yOffset))
 
         Return Framebuffer
     End Function
+    Public Function Frame(IntegerScale As Integer) As Bitmap
+        Dim original = Frame()
+        Dim newbmp As New Bitmap(256 * IntegerScale, 256 * IntegerScale)
+        FastBitmapRenderer.StretchBlitBitmapToBitmap(original, newbmp, 0, 0, 256 * IntegerScale, 256 * IntegerScale)
+        Return newbmp
+    End Function
 End Class

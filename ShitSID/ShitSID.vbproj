@@ -34,13 +34,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FFMediaToolkit" Version="4.8.1" />
     <PackageReference Include="Highbyte.DotNet6502" Version="0.26.2-alpha" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
+    <PackageReference Include="NAudio" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\C64Util\C64Util.csproj" />
+    <Reference Include="C64Util">
+      <HintPath>B:\source\repos\ShitSID\C64Util\bin\Debug\net9.0-windows\C64Util.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
