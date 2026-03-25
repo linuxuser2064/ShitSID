@@ -249,7 +249,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         opts.CodecOptions("profile") = "high444"
         opts.CodecOptions("pix_fmt") = "yuv444p"
         opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444
-        EncodeVid = MediaBuilder.CreateContainer("B:\source\repos\ShitSID\ShitSID\bin\Debug\net9.0-windows\output.mp4", ContainerFormat.MP4).
+        EncodeVid = MediaBuilder.CreateContainer(Path.Combine(Environment.CurrentDirectory, "output.mp4"), ContainerFormat.MP4).
             WithVideo(opts).Create
         Console.WriteLine("Encoding...")
         provider.runCPU = True
@@ -300,6 +300,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         If PSGViewForm.IsDisposed Then Exit Sub
         If Not PSGViewForm.Visible Then Exit Sub
         FastBitmapRenderer.RenderBitmapOnForm(PSGViewFormHandle, frame, 0, 0)
+        frame.Dispose()
         'FastBitmapRenderer.RenderBitmapStretched(PSGViewFormHandle, frame, 0, 0, New Drawing.Size(512, 512))
     End Sub
 End Class

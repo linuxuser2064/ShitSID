@@ -16,15 +16,10 @@
     Dim BitOnBrush As New SolidBrush(Color.FromArgb(0, 192, 0))
 
     Dim ProgressBarForegroundBrush As New SolidBrush(Color.FromArgb(0, 148, 255))
-
-    'Dim MasterVolumeBuffer As New List(Of Byte)
     Public Sub New(iSID As ShitSID)
         SID = iSID
         g.InterpolationMode = Drawing2D.InterpolationMode.NearestNeighbor
         g.TextRenderingHint = Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit
-        'For i = 0 To 127
-        '    MasterVolumeBuffer.Add(15)
-        'Next
     End Sub
     Private Function cX(x As Integer) As Integer
         Return x - 3
@@ -99,14 +94,9 @@
             CommonFont, Brushes.White, cX(99), cY(44 + yOffset))
         g.DrawString($"Params {SID.Voices(idx).Envelope.Attack.ToString("X")}{SID.Voices(idx).Envelope.Decay.ToString("X")}{(SID.Voices(idx).Envelope.Sustain \ 15.9375).ToString("X")}{SID.Voices(idx).Envelope.Release.ToString("X")}",
 CommonFont, Brushes.White, cX(120), cY(44 + yOffset))
-        'g.DrawString("Gate", CommonFont, Brushes.White, cX(200), cY(44 + yOffset))
 
     End Sub
     Public Function Frame(volbuf As Byte()) As Bitmap
-        'MasterVolumeBuffer.Add(SID.VolumeRegister)
-        'If MasterVolumeBuffer.Count > 128 Then
-        '    MasterVolumeBuffer.RemoveAt(0)
-        'End If
         g.Clear(Color.Black)
         DrawChannel(0, 0)
         DrawChannel(1, 54)
