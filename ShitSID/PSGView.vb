@@ -1,4 +1,6 @@
-﻿Public Class PSGView
+﻿Imports System.Globalization
+Imports System.Threading
+Public Class PSGView
     Public Property SID As ShitSID
     Public Property Framebuffer As New Bitmap(256, 256)
     Dim g As Graphics = Graphics.FromImage(Framebuffer)
@@ -16,6 +18,8 @@
     Dim BitOnBrush As New SolidBrush(Color.FromArgb(0, 192, 0))
 
     Dim ProgressBarForegroundBrush As New SolidBrush(Color.FromArgb(0, 148, 255))
+
+    Public Property ShowPCMGraph As Boolean = True
     Public Sub New(iSID As ShitSID)
         SID = iSID
         g.InterpolationMode = Drawing2D.InterpolationMode.NearestNeighbor
@@ -28,6 +32,8 @@
         Return y - 4
     End Function
     Public Sub DrawChannel(idx As Integer, yOffset As Integer)
+        Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture
+        Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture
         g.FillRectangle(SectionLabelBrush, 0, yOffset, 57, 11)
         g.DrawString($"Channel {idx + 1}:", CommonFont, Brushes.White, cX(2), cY(2 + yOffset))
 
@@ -42,7 +48,7 @@
         g.DrawImageUnscaled(My.Resources.PSGViewResources.waveform_pulse, 70, 14 + yOffset)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.waveform_noise, 87, 14 + yOffset)
 
-        If SID.Voices(idx).Control And &H4 Then g.FillRectangle(EnabledOptionBrush, 114, 13 + yOffset, 43, 9)
+        If SID.Voices(idx).Control And &H4 Then g.FillRectangle(EnabledOptionBrush, 114, 13 + yOffset, 25, 9)
         If SID.Voices(idx).Control And &H2 Then g.FillRectangle(EnabledOptionBrush, 144, 13 + yOffset, 27, 9)
         If SID.Voices(idx).UseFilter Then g.FillRectangle(EnabledOptionBrush, 176, 13 + yOffset, 35, 9)
         If SID.Voices(idx).Control And &H8 Then g.FillRectangle(EnabledOptionBrush, 215, 13 + yOffset, 27, 9)
@@ -75,7 +81,7 @@
 
         g.DrawRectangle(ScrollbarTrackOuterPen, 35 + CInt(filledD) - 1, 33 + yOffset, 2, 9)
         g.DrawLine(ScrollbarTrackInnerPen, 35 + CInt(filledD), 34 + yOffset, 35 + CInt(filledD), 41 + yOffset)
-        g.DrawString(Math.Floor(SID.Voices(idx).Frequency), CommonFont, Brushes.White, cX(200), cY(34 + yOffset))
+        g.DrawString(Math.Round(SID.Voices(idx).Frequency, 1), CommonFont, Brushes.White, cX(200), cY(34 + yOffset))
         g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(34 + yOffset))
 
         g.DrawString("ADSR:", CommonFont, Brushes.White, cX(2), cY(44 + yOffset))
@@ -142,12 +148,15 @@ CommonFont, Brushes.White, cX(120), cY(44 + yOffset))
         g.FillRectangle(ProgressBarForegroundBrush, 43, 210, filled, 7)
         g.FillRectangle(BarBackgroundBrush, 90 - remainder, 210, remainder, 7)
         g.DrawString(CInt(SID.VolumeRegister), CommonFont, Brushes.White, cX(95), cY(210))
-        g.FillRectangle(BarBackgroundBrush, 0, 226, 256, 30)
-        For i = 0 To volbuf.Length - 1
-            Dim prev = 30 - volbuf(Math.Max(0, i - 1)) * 2
-            Dim current = 30 - volbuf(i) * 2
-            g.DrawLine(Pens.White, i * 2 + 1, 226 + current, i * 2, 226 + prev)
-        Next
+
+        If ShowPCMGraph Then
+            g.FillRectangle(BarBackgroundBrush, 0, 225, 256, 31)
+            For i = 0 To volbuf.Length - 1
+                Dim prev = 30 - volbuf(Math.Max(0, i - 1)) * 2
+                Dim current = 30 - volbuf(i) * 2
+                g.DrawLine(Pens.White, i + 1, 225 + current, i, 225 + prev)
+            Next
+        End If
 
         Return Framebuffer
     End Function

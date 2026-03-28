@@ -21,11 +21,13 @@ public class CiaIRQ
         if (_useNMI)
         {
             // Raise NMI (Non-Maskable Interrupt)
+            //Console.WriteLine("[CIA] Triggering NMI");
             cpu.CPUInterrupts.SetNMISourceActive(source.ToString());
         }
         else
         {
             // Raise IRQ (Interrupt Request)
+            Console.WriteLine("[CIA] Triggering IRQ");
             cpu.CPUInterrupts.SetIRQSourceActive(source.ToString(), autoAcknowledge: true);
         }
     }
@@ -36,10 +38,12 @@ public class CiaIRQ
     }
     public void Enable(IRQSource source)
     {
+        Console.WriteLine($"[CIA] Enabling {source}");
         _sourceEnableStatus[source] = true;
     }
     public void Disable(IRQSource source)
     {
+        Console.WriteLine($"[CIA] Disabling {source}");
         _sourceEnableStatus[source] = false;
     }
 

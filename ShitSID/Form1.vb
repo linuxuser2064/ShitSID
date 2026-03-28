@@ -231,6 +231,12 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         If Not OpenFileDialog1.ShowDialog = DialogResult.OK Then
             Exit Sub
         End If
+        If Not SaveFileDialog1.ShowDialog = DialogResult.OK Then
+            Exit Sub
+        End If
+        Me.Enabled = False
+        Dim outputFolder = Path.GetDirectoryName(SaveFileDialog1.FileName)
+        Dim outputFileNoExt = Path.GetFileNameWithoutExtension(SaveFileDialog1.FileName)
         Console.WriteLine("Init MF...")
         MediaFoundationApi.Startup()
         Console.WriteLine("Loading SID...")
@@ -249,13 +255,14 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         opts.CodecOptions("profile") = "high444"
         opts.CodecOptions("pix_fmt") = "yuv444p"
         opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444
-        EncodeVid = MediaBuilder.CreateContainer(Path.Combine(Environment.CurrentDirectory, "output.mp4"), ContainerFormat.MP4).
+        EncodeVid = MediaBuilder.CreateContainer(Path.Combine(outputFolder, $"{outputFileNoExt}.mp4"), ContainerFormat.MP4).
             WithVideo(opts).Create
         Console.WriteLine("Encoding...")
         provider.runCPU = True
-        wavProv.Encode("output.wav", provider.Take(TimeSpan.FromSeconds(NumericUpDown5.Value)).ToWaveProvider)
+        wavProv.Encode(Path.Combine(outputFolder, $"{outputFileNoExt}.wav"), provider.Take(TimeSpan.FromSeconds(NumericUpDown5.Value)).ToWaveProvider)
         EncodeVid.Dispose()
         Console.WriteLine("Done")
+        Me.Enabled = True
         RemoveHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
         AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
 
@@ -267,6 +274,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             Console.WriteLine($"Video time: {stamp.ToString}")
             BitmapToImageData.BMPtoBitmapData.AddBitmapFrame(EncodeVid, data)
             stamp = stamp.Add(TimeSpan.FromMilliseconds(1000 / provider.TickRate)) ' hardcoded ahh
+            'Application.DoEvents()
         Catch ex As Exception
             Console.WriteLine(ex.ToString)
         Finally

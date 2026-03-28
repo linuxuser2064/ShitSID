@@ -1,4 +1,7 @@
 ﻿Imports Highbyte.DotNet6502
+Imports Highbyte.DotNet6502.Instructions
+Imports Highbyte.DotNet6502.Systems.Commodore64.TimerAndPeripheral
+Imports Microsoft.Extensions.Logging
 Imports NAudio.Wave
 
 Public Class SidAudioProvider
@@ -19,12 +22,7 @@ Public Class SidAudioProvider
     Private SIDClockRate As Long = SID_CLOCK_RATE_PAL
     Dim cpuClockPhase As Long = 1
     Dim playAddr As UShort
-    Dim TimerLoByte As Byte = 0
-    Dim TimerHiByte As Byte = 0
-    Dim TimerACycle As UShort = 0
-    Dim TimerActive As Boolean = False
-    Dim TimerTrigger As Boolean = False
-    Dim TimerPhase As UShort = 0
+    Dim CIA2 As Cia2
     Dim volumebuf As New List(Of Byte)
     Dim volphase As Integer = 0
     Const voldivider As Integer = 16
@@ -48,6 +46,9 @@ Public Class SidAudioProvider
         sampleRate = sampleRateHz
         Me.psgView = PSGView
         vWaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRateHz, 1)
+        For i = 0 To 255
+            volumebuf.Add(15)
+        Next
     End Sub
     Public Sub InitSIDFile()
         mem.MapRAM(sidfile.LoadAddress, sidfile.Data)
@@ -69,27 +70,15 @@ Public Class SidAudioProvider
         mem.MapReader(54300, Function(addr As UShort)
                                  Return sid.Voices(2).Envelope.Output
                              End Function)
-        mem.MapWriter(56580, Sub(addr As UShort, value As Byte)
-                                 TimerLoByte = value
-                                 Console.WriteLine($"Timer A every {BitConverter.ToUInt16({TimerLoByte, TimerHiByte})} cycles")
-                                 TimerACycle = BitConverter.ToUInt16({TimerLoByte, TimerHiByte})
-                             End Sub)
-        mem.MapWriter(56581, Sub(addr As UShort, value As Byte)
-                                 TimerHiByte = value
-                                 Console.WriteLine($"Timer A every {BitConverter.ToUInt16({TimerLoByte, TimerHiByte})} cycles")
-                                 TimerACycle = BitConverter.ToUInt16({TimerLoByte, TimerHiByte})
-                             End Sub)
-        mem.MapWriter(56589, Sub(addr As UShort, value As Byte)
-                                 Dim bits As New BitArray({value})
-                                 TimerTrigger = bits(0)
-                                 Console.WriteLine($"Timer trigger: {TimerTrigger}")
-                             End Sub)
-        mem.MapWriter(56590, Sub(addr As UShort, value As Byte)
-                                 Dim bits As New BitArray({value})
-                                 TimerActive = bits(0)
-                                 Console.WriteLine($"Timer active: {TimerActive}")
-                             End Sub)
+        Dim factory = LoggerFactory.Create(Function(builder)
+                                               Return builder.SetMinimumLevel(LogLevel.Debug).AddConsole
+                                           End Function)
+        CIA2 = New Cia2(cpu, factory)
+        CIA2.MapIOLocations(mem)
         cpu.ExecuteUntilBRK(mem)
+        mem(0) = &H4C
+        mem(1) = &H0
+        mem(2) = &H0
         If sidfile.PlayAddress = 0 Then ' RSID mode activate
             playAddr = BitConverter.ToUInt16({mem(788), mem(789)}) ' kernal IRQ vector (rarely used)
             If playAddr = 0 Then
@@ -101,10 +90,10 @@ Public Class SidAudioProvider
         Else
             playAddr = sidfile.PlayAddress
         End If
-        Console.WriteLine($"IRQ is {BitConverter.ToUInt16({mem(65534), mem(65535)})}")
-        Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
+        System.Console.WriteLine($"IRQ is {BitConverter.ToUInt16({mem(65534), mem(65535)})}")
+        System.Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
         NMIVec = BitConverter.ToUInt16({mem(65530), mem(65531)})
-        Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
+        System.Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
         cpuClockPhase = sampleRate \ TickRate - 1
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
@@ -119,9 +108,7 @@ Public Class SidAudioProvider
             cpuClockPhase += 1
 
             If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)
-                ' fake interrupt
-                cpu.PushWordToStack(cpu.PC, mem)
-                cpu.PushByteToStack(0, mem) ' fuck da flags this is purely for stack alignment
+                cpu.CPUInterrupts.SetIRQSourceActive("raster", True)
                 cpu.PC = playAddr
                 cpuClockPhase -= (sampleRate \ TickRate)
                 RaiseEvent PSGViewFrame(psgView.Frame(volumebuf.ToArray, 2))
@@ -132,24 +119,13 @@ Public Class SidAudioProvider
                 If runCPU Then
                     Dim state = cpu.ExecuteOneInstruction(mem)
 
-                    ' --- decrement Timer A if active ---
-                    If TimerActive Then
-                        TimerPhase += state.CyclesConsumed
-                        While TimerPhase >= TimerACycle
-                            ' Trigger NMI
-                            NMIVec = BitConverter.ToUInt16({mem(65530), mem(65531)})
-                            cpu.CPUInterrupts.SetNMISourceActive("CIA2") ' the proper way
-                            TimerPhase -= TimerACycle
-                        End While
-                    End If
-
                     sidPhase -= state.CyclesConsumed
 
                     ' Clock the SID for each CPU cycle
                     For cyc = CULng(1) To state.CyclesConsumed
                         sid.Clock()
                     Next
-
+                    CIA2.ProcessTimers(state.CyclesConsumed)
                 Else
                     ' If CPU not running, just clock SID
                     sid.Clock()
@@ -158,9 +134,9 @@ Public Class SidAudioProvider
             End While
 
             volphase += 1
-            If volphase >= voldivider Then
+            If volphase >= voldivider \ 2 Then
                 volumebuf.Add(sid.VolumeRegister)
-                If volumebuf.Count > 128 Then
+                If volumebuf.Count > 256 Then
                     volumebuf.RemoveAt(0)
                 End If
                 volphase = 0

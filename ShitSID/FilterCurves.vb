@@ -2053,7 +2053,7 @@ Tuple.Create(2046, 11863.9),
 Tuple.Create(2047, 11863.9)
     }
     ' ReSID6581 curve
-    Private ReadOnly cutoffCurve6581 As New List(Of Tuple(Of Integer, Double)) From {
+    Public Shared ReadOnly cutoffCurve6581 As New List(Of Tuple(Of Integer, Double)) From {
 Tuple.Create(0, 262.2693),
 Tuple.Create(1, 262.3425),
 Tuple.Create(2, 262.4113),

@@ -65,6 +65,7 @@ Partial Class Form1
         NumericUpDown6 = New NumericUpDown()
         Label7 = New Label()
         Label8 = New Label()
+        SaveFileDialog1 = New SaveFileDialog()
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox1.SuspendLayout()
         CType(NumericUpDown2, ComponentModel.ISupportInitialize).BeginInit()
@@ -413,6 +414,7 @@ Partial Class Form1
         ' 
         ' NumericUpDown5
         ' 
+        NumericUpDown5.DecimalPlaces = 1
         NumericUpDown5.Location = New Point(162, 24)
         NumericUpDown5.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
         NumericUpDown5.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
@@ -490,6 +492,10 @@ Partial Class Form1
         Label8.Size = New Size(21, 15)
         Label8.TabIndex = 22
         Label8.Text = "Hz"
+        ' 
+        ' SaveFileDialog1
+        ' 
+        SaveFileDialog1.Filter = "Wave files|*.wav|All files|*"
         ' 
         ' Form1
         ' 
@@ -577,5 +583,6 @@ Partial Class Form1
     Friend WithEvents NumericUpDown6 As NumericUpDown
     Friend WithEvents Label7 As Label
     Friend WithEvents Label8 As Label
+    Friend WithEvents SaveFileDialog1 As SaveFileDialog
 
 End Class
