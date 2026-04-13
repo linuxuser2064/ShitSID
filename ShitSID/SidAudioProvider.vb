@@ -1,4 +1,5 @@
-﻿Imports Highbyte.DotNet6502
+﻿Imports System.Threading
+Imports Highbyte.DotNet6502
 Imports Highbyte.DotNet6502.Instructions
 Imports Highbyte.DotNet6502.Systems.Commodore64.TimerAndPeripheral
 Imports Microsoft.Extensions.Logging
@@ -22,6 +23,7 @@ Public Class SidAudioProvider
     Private SIDClockRate As Long = SID_CLOCK_RATE_PAL
     Dim cpuClockPhase As Long = 1
     Dim playAddr As UShort
+    Dim CIA1 As Cia1
     Dim CIA2 As Cia2
     Dim volumebuf As New List(Of Byte)
     Dim volphase As Integer = 0
@@ -50,8 +52,20 @@ Public Class SidAudioProvider
             volumebuf.Add(15)
         Next
     End Sub
+    Public Sub DisAsmState(state As ExecState)
+        Dim size = cpu.GetInstructionSize(mem, state.PCBeforeLastOpCodeExecuted)
+        Dim out = ""
+        For i = 1 To size - 1
+            Dim data = mem(state.PCBeforeLastOpCodeExecuted + i)
+            out &= $"{data:X2} "
+        Next
+        System.Console.WriteLine($"PC: {cpu.PC:X4} A:{cpu.A:X2} X:{cpu.X:X2} Y:{cpu.Y:X2} {CType(state.LastInstructionExecResult.OpCodeByte, OpCodeId)} {out}")
+    End Sub
     Public Sub InitSIDFile()
-        mem.MapRAM(sidfile.LoadAddress, sidfile.Data)
+        'mem.MapRAM(sidfile.LoadAddress, sidfile.Data)
+        For i = sidfile.LoadAddress To sidfile.LoadAddress + sidfile.Data.Length - 1
+            mem(i) = sidfile.Data(i - sidfile.LoadAddress)
+        Next
         cpu.PC = sidfile.InitAddress
         If Form1.NumericUpDown1.Value > 0 Then
             cpu.A = Form1.NumericUpDown1.Value - 1
@@ -75,26 +89,46 @@ Public Class SidAudioProvider
                                            End Function)
         CIA2 = New Cia2(cpu, factory)
         CIA2.MapIOLocations(mem)
-        cpu.ExecuteUntilBRK(mem)
-        mem(0) = &H4C
-        mem(1) = &H0
-        mem(2) = &H0
+        'CIA1 = New Cia1(cpu, factory)
+        'CIA1.MapIOLocations(mem)
+        While True ' nuclear while
+            Dim state = cpu.ExecuteOneInstruction(mem)
+            CIA2.ProcessTimers(state.CyclesConsumed)
+            'CIA1.ProcessTimers(state.CyclesConsumed)
+            DisAsmState(state)
+            If state.LastInstructionExecResult.OpCodeByte = &H60 Then Exit While
+            If state.LastInstructionExecResult.OpCodeByte = &H40 Then Exit While
+            If state.LastInstructionExecResult.OpCodeByte = &H0 Then Exit While
+            'Thread.Sleep(1)
+        End While
+        'cpu.ExecuteUntilBRK(mem)
+        mem(&HFFF0) = &H4C
+        mem(&HFFF1) = &HF0
+        mem(&HFFF2) = &HFF
         If sidfile.PlayAddress = 0 Then ' RSID mode activate
+
+
             playAddr = BitConverter.ToUInt16({mem(788), mem(789)}) ' kernal IRQ vector (rarely used)
             If playAddr = 0 Then
                 playAddr = BitConverter.ToUInt16({mem(65534), mem(65535)}) ' IRQ vector
             End If
             MsgBox($"RSID detected, play address set to {playAddr}")
-            mem(65534) = 0 ' fucking hack but it works anyway lol (will be removed)
-            mem(65535) = 0
+            mem(65534) = &HF0 ' fucking hack but it works anyway lol (will be removed)
+            mem(65535) = &HFF
         Else
             playAddr = sidfile.PlayAddress
+            'mem(65534) = playAddr And &HFF
+            'mem(65535) = (playAddr And &HFF00) >> 8
+            mem(65534) = &HF0 ' fucking hack but it works anyway lol (will be removed)
+            mem(65535) = &HFF
         End If
+        System.Console.WriteLine($"Play address is {playAddr:X4}")
         System.Console.WriteLine($"IRQ is {BitConverter.ToUInt16({mem(65534), mem(65535)})}")
         System.Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
         NMIVec = BitConverter.ToUInt16({mem(65530), mem(65531)})
         System.Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
-        cpuClockPhase = sampleRate \ TickRate - 1
+        cpuClockPhase = 0 ' sampleRate \ TickRate - 1
+        cpu.PC = &HFFF0
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
         Dim phaseIncrement As Double = SIDClockRate / sampleRate
@@ -107,7 +141,7 @@ Public Class SidAudioProvider
             sidPhaseFrac -= wholeCycles
             cpuClockPhase += 1
 
-            If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame (PAL)
+            If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame
                 cpu.CPUInterrupts.SetIRQSourceActive("raster", True)
                 cpu.PC = playAddr
                 cpuClockPhase -= (sampleRate \ TickRate)
@@ -118,7 +152,7 @@ Public Class SidAudioProvider
             While sidPhase >= 1
                 If runCPU Then
                     Dim state = cpu.ExecuteOneInstruction(mem)
-
+                    'DisAsmState(state)
                     sidPhase -= state.CyclesConsumed
 
                     ' Clock the SID for each CPU cycle
@@ -126,6 +160,7 @@ Public Class SidAudioProvider
                         sid.Clock()
                     Next
                     CIA2.ProcessTimers(state.CyclesConsumed)
+                    CIA1.ProcessTimers(state.CyclesConsumed)
                 Else
                     ' If CPU not running, just clock SID
                     sid.Clock()

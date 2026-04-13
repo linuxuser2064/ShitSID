@@ -34,7 +34,7 @@ Public Class Form1
     Private Sub LoadSID()
         ' Reinitialize components
         sid = New ShitSID(SAMPLERATE)
-        cpu.SP = 1
+        'cpu.SP = 1
         mem(1) = &H37
         SidFile = SidFile.Load(OpenFileDialog1.FileName)
         If SidFile.FlagBits(2) = False AndAlso SidFile.FlagBits(3) = True Then
