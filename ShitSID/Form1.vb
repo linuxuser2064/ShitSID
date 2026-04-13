@@ -34,6 +34,7 @@ Public Class Form1
     Private Sub LoadSID()
         ' Reinitialize components
         sid = New ShitSID(SAMPLERATE)
+        mem = New Memory()
         'cpu.SP = 1
         mem(1) = &H37
         SidFile = SidFile.Load(OpenFileDialog1.FileName)

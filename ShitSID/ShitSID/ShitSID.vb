@@ -18,7 +18,14 @@
     Public FilterCutoffHi As Integer = 0
     Public FilterResonance As Integer = 0
     Public FilterMode As Integer = 0 ' 0-7 (bit flags)
-    Public BypassFilter As Boolean = False
+    Public Property BypassFilter As Boolean
+        Get
+            Return True
+        End Get
+        Set(value As Boolean)
+            ' fucking nothing lol
+        End Set
+    End Property
 
     Public VolumeSampleMode As Boolean = True
     Public VolumeRegister As Byte

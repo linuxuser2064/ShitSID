@@ -102,9 +102,10 @@ Public Class SidAudioProvider
             'Thread.Sleep(1)
         End While
         'cpu.ExecuteUntilBRK(mem)
-        mem(&HFFF0) = &H4C
-        mem(&HFFF1) = &HF0
-        mem(&HFFF2) = &HFF
+        mem.MapROM(0, {&H4C, 0, 0})
+        'mem(&H0) = &H4C
+        'mem(&H1) = &H0
+        'mem(&H2) = &H0
         If sidfile.PlayAddress = 0 Then ' RSID mode activate
 
 
@@ -113,22 +114,20 @@ Public Class SidAudioProvider
                 playAddr = BitConverter.ToUInt16({mem(65534), mem(65535)}) ' IRQ vector
             End If
             MsgBox($"RSID detected, play address set to {playAddr}")
-            mem(65534) = &HF0 ' fucking hack but it works anyway lol (will be removed)
-            mem(65535) = &HFF
         Else
             playAddr = sidfile.PlayAddress
             'mem(65534) = playAddr And &HFF
             'mem(65535) = (playAddr And &HFF00) >> 8
-            mem(65534) = &HF0 ' fucking hack but it works anyway lol (will be removed)
-            mem(65535) = &HFF
         End If
+        mem(65534) = &H0 ' fucking hack but it works anyway lol (will be removed)
+        mem(65535) = &H0
         System.Console.WriteLine($"Play address is {playAddr:X4}")
         System.Console.WriteLine($"IRQ is {BitConverter.ToUInt16({mem(65534), mem(65535)})}")
         System.Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
         NMIVec = BitConverter.ToUInt16({mem(65530), mem(65531)})
         System.Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
         cpuClockPhase = 0 ' sampleRate \ TickRate - 1
-        cpu.PC = &HFFF0
+        cpu.PC = &H0
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
         Dim phaseIncrement As Double = SIDClockRate / sampleRate
@@ -152,7 +151,7 @@ Public Class SidAudioProvider
             While sidPhase >= 1
                 If runCPU Then
                     Dim state = cpu.ExecuteOneInstruction(mem)
-                    'DisAsmState(state)
+                    DisAsmState(state)
                     sidPhase -= state.CyclesConsumed
 
                     ' Clock the SID for each CPU cycle
@@ -160,7 +159,7 @@ Public Class SidAudioProvider
                         sid.Clock()
                     Next
                     CIA2.ProcessTimers(state.CyclesConsumed)
-                    CIA1.ProcessTimers(state.CyclesConsumed)
+                    'CIA1.ProcessTimers(state.CyclesConsumed)
                 Else
                     ' If CPU not running, just clock SID
                     sid.Clock()

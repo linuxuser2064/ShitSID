@@ -12,6 +12,7 @@
     Public PulseWidthHi As Byte = 0
     Public UseFilter As Boolean = False
     Public Envelope As New EnvelopeGenerator()
+    Public Output As Double = 0
     Private lastNoiseUpdate As Double = 0
     Private currentNoise As Double = 0
     Private Index As Int32
@@ -50,95 +51,46 @@
         Dim deltaTime As Double = time - lastTime
         lastTime = time
         Dim wave As Double
+        Dim freezeOutput As Boolean = Waveform = "noise"
 
         If (Control And &H8) <> 0 Then ' test bit
-            Return Envelope.Output / 255.0
+            freezeOutput = True
         End If
 
-        ' sync/ringmod stuff
+
+        ' sync stuff
         Dim sourceIndex As Integer = (Me.Index + 2) Mod 3
         Dim sourceVoice = Me.Parent.Voices(sourceIndex)
 
         Dim newFrequency = Frequency
+        wave = Math.Sin(phase * 2 * Math.PI)
+        Output = wave
 
         ' phase accumulator
-        phase += newFrequency * deltaTime
-        phase = phase Mod 1.0
-
-        ' new 12 bit phase
-        Dim acc As Integer = CInt(phase * &HFFF) ' 3 nybbles looks cursed
-        ' sid accurate waveform generation
-        Dim sawVal As Integer = acc
-        Dim triVal As Integer = (acc << 1) And &HFFF
-        If (acc And &H800) <> 0 Then ' MSB is bit 11
-            triVal = triVal Xor &HFFF
-        End If
-        Dim pulseVal As Integer = If(acc > DutyCycle * &HFFF, &HFFF, 0)
-
-        Dim dacInput As Integer = 0
-        Select Case Waveform
-            Case "saw"
-                dacInput = sawVal
-            Case "tri"
-                dacInput = triVal
-            Case "pulse"
-                dacInput = pulseVal
-            Case "noise"
-                Dim cycleDuration As Double = 1.0 / Frequency
-                Dim interval As Double = cycleDuration / 16.0
-                If time - lastNoiseUpdate >= interval Then
-                    lastNoiseUpdate = time
-                    currentNoise = lfsr.Read(acc) 'rand.NextDouble() * 2 - 1
-                End If
-                dacInput = currentNoise
-            Case "saw+tri"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) * 16)
-                End If
-            Case "tri+pulse"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) * 16)
-                End If
-            Case "saw+pulse"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) * 16)
-                End If
-            Case "saw+tri+pulse"
-                If Parent.Filter.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
-                End If
-            Case Else
-                dacInput = 0
-        End Select
-        ' xor ringmod
-        If Waveform = "tri" AndAlso (Control And &H4) Then
-            If sourceVoice.phase >= 0.5 Then
-                dacInput = 4095 - dacInput
-            End If
-        End If
-        If (Waveform = "saw+tri" Or Waveform = "tri+pulse" Or Waveform = "saw+pulse" Or Waveform = "saw+tri+pulse") AndAlso (Control And &H4) Then
-            If sourceVoice.phase >= 0.5 Then
-                dacInput *= 0
-            End If
-        End If
-        ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
-        wave = (dacInput / &HFFF) * 2.0 - 1.0
-        '  hardsync
-        Dim masterPhaseMSB As Boolean = (sourceVoice.phase >= 0.5)
         If (Control And &H2) <> 0 Then
-            If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
-                Me.phase = 0.0
+            If sourceVoice.Frequency > Me.Frequency Then
+                newFrequency = sourceVoice.Frequency
             End If
         End If
-        prevMasterMSB = masterPhaseMSB
+        ' ringmod (real)
+        If Control And &H4 Then
+            wave *= sourceVoice.Output
+        End If
+        If Not freezeOutput Then
+            phase += newFrequency * deltaTime
+        End If
+        'If phase > 1 AndAlso (Not freezeOutput) Then
+        '    phase -= 1
+        'End If
+
+        'If phase <= 1 Then
+        '    phase += newFrequency * deltaTime
+        'End If
+
+        ' based on RMS
+        If Waveform = "saw" Then wave *= 0.6
+        If Waveform = "tri" Then wave *= 0.5
+
         Return wave
     End Function
     Public Function Generate(time As Double) As Double
