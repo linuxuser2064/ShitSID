@@ -159,8 +159,8 @@ Public Class SidAudioProvider
                     For cyc = CULng(1) To state.CyclesConsumed
                         sid.Clock()
                     Next
-                    'CIA2.ProcessTimers(state.CyclesConsumed)
-                    CIA1.ProcessTimers(state.CyclesConsumed)
+                    CIA2.ProcessTimers(state.CyclesConsumed)
+                    'CIA1.ProcessTimers(state.CyclesConsumed)
                 Else
                     ' If CPU not running, just clock SID
                     sid.Clock()
