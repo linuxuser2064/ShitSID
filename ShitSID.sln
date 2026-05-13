@@ -9,6 +9,8 @@ Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ShitSIDAudioTesting", "Shit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "C64Util", "C64Util\C64Util.csproj", "{E14581AD-AEA0-4AC1-822C-93C68952E225}"
 EndProject
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "SID creator", "SID creator\SID creator.vbproj", "{20B0D61F-318B-483D-9078-E68939894932}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{E14581AD-AEA0-4AC1-822C-93C68952E225}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E14581AD-AEA0-4AC1-822C-93C68952E225}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E14581AD-AEA0-4AC1-822C-93C68952E225}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20B0D61F-318B-483D-9078-E68939894932}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20B0D61F-318B-483D-9078-E68939894932}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20B0D61F-318B-483D-9078-E68939894932}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20B0D61F-318B-483D-9078-E68939894932}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,4 +1,5 @@
-﻿Imports System.Threading
+﻿Imports System.Reflection.Emit
+Imports System.Threading
 Imports Highbyte.DotNet6502
 Imports Highbyte.DotNet6502.Instructions
 Imports Highbyte.DotNet6502.Systems.Commodore64.TimerAndPeripheral
@@ -27,7 +28,16 @@ Public Class SidAudioProvider
     Dim CIA2 As Cia2
     Dim volumebuf As New List(Of Byte)
     Dim volphase As Integer = 0
-    Const voldivider As Integer = 16
+
+    Public EnablePCMCapture As Boolean = False
+    Dim lastVol As Byte = 0
+    Dim CycleCounter As UInt128 = 0
+    'Const voldivider As Integer = 16
+    Public ReadOnly Property voldivider As Integer
+        Get
+            Return CInt(sampleRate / 5512.5)
+        End Get
+    End Property
     Private NTSCOn As Boolean = False
     Public Property UseNTSC() As Boolean
         Get
@@ -38,7 +48,6 @@ Public Class SidAudioProvider
             If value Then SIDClockRate = SID_CLOCK_RATE_NTSC Else SIDClockRate = SID_CLOCK_RATE_PAL
         End Set
     End Property
-    Dim NMIVec As UShort = 0
     Public runCPU As Boolean = False
     Public TickRate As Integer
     Public Sub New(ByRef sidEmu As ShitSID, ByRef cpuV As CPU, ByRef memV As Memory, ByRef PSGView As PSGView, Optional sampleRateHz As Integer = 44100)
@@ -52,14 +61,35 @@ Public Class SidAudioProvider
             volumebuf.Add(15)
         Next
     End Sub
-    Public Sub DisAsmState(state As ExecState)
+    Public Sub DisAsmState(state As ExecState, Optional wait As Boolean = False)
+        If cpu.PC = &H0 Then Exit Sub
+        If wait Then Thread.Sleep(1)
         Dim size = cpu.GetInstructionSize(mem, state.PCBeforeLastOpCodeExecuted)
         Dim out = ""
         For i = 1 To size - 1
             Dim data = mem(state.PCBeforeLastOpCodeExecuted + i)
             out &= $"{data:X2} "
         Next
+        If state.LastInstructionExecResult.OpCodeByte = OpCodeId.PHA Or
+            state.LastInstructionExecResult.OpCodeByte = OpCodeId.PHP Then
+            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}] Pushed {cpu.A:X2} to stack")
+            Exit Sub
+        End If
+        If state.LastInstructionExecResult.OpCodeByte = OpCodeId.PLA Or
+            state.LastInstructionExecResult.OpCodeByte = OpCodeId.PLP Then
+            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}] Pulled {cpu.A:X2} from stack")
+            Exit Sub
+        End If
+        If state.LastInstructionExecResult.OpCodeByte = OpCodeId.TXS Then
+            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}] Transferred {cpu.X} to SP")
+            Exit Sub
+        End If
+        Static LastSP = 0
+        If LastSP <> cpu.SP Then
+            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}]")
+        End If
         System.Console.WriteLine($"PC: {cpu.PC:X4} A:{cpu.A:X2} X:{cpu.X:X2} Y:{cpu.Y:X2} {CType(state.LastInstructionExecResult.OpCodeByte, OpCodeId)} {out}")
+        LastSP = cpu.SP
     End Sub
     Public Sub InitSIDFile()
         'mem.MapRAM(sidfile.LoadAddress, sidfile.Data)
@@ -77,7 +107,11 @@ Public Class SidAudioProvider
                                  sid.WriteRegister(addr, value)
                              End Sub)
         Next
+        If EnablePCMCapture Then
+            mem.MapWriter(&HD418, Sub(addr, value)
 
+                                  End Sub)
+        End If
         mem.MapReader(54299, Function(addr As UShort)
                                  Return sid.Voices(2).GenerateNoEnvelope(sid.CurrentTime) * 127
                              End Function)
@@ -96,39 +130,35 @@ Public Class SidAudioProvider
             CIA2.ProcessTimers(state.CyclesConsumed)
             'CIA1.ProcessTimers(state.CyclesConsumed)
             DisAsmState(state)
-            If state.LastInstructionExecResult.OpCodeByte = &H60 Then Exit While
-            If state.LastInstructionExecResult.OpCodeByte = &H40 Then Exit While
+            'If state.LastInstructionExecResult.OpCodeByte = &H60 Then Exit While
+            'If state.LastInstructionExecResult.OpCodeByte = &H40 Then Exit While
             If state.LastInstructionExecResult.OpCodeByte = &H0 Then Exit While
             'Thread.Sleep(1)
         End While
         'cpu.ExecuteUntilBRK(mem)
-        mem(&HFFF0) = &H4C
-        mem(&HFFF1) = &HF0
-        mem(&HFFF2) = &HFF
+        mem.MapROM(0, {&H4C, 0, 0})
+        mem(&H0) = &H4C
+        mem(&H1) = &H0
+        mem(&H2) = &H0
         If sidfile.PlayAddress = 0 Then ' RSID mode activate
-
-
             playAddr = BitConverter.ToUInt16({mem(788), mem(789)}) ' kernal IRQ vector (rarely used)
             If playAddr = 0 Then
                 playAddr = BitConverter.ToUInt16({mem(65534), mem(65535)}) ' IRQ vector
             End If
             MsgBox($"RSID detected, play address set to {playAddr}")
-            mem(65534) = &HF0 ' fucking hack but it works anyway lol (will be removed)
-            mem(65535) = &HFF
         Else
             playAddr = sidfile.PlayAddress
             'mem(65534) = playAddr And &HFF
             'mem(65535) = (playAddr And &HFF00) >> 8
-            mem(65534) = &HF0 ' fucking hack but it works anyway lol (will be removed)
-            mem(65535) = &HFF
         End If
+        mem(65534) = &H0 ' fucking hack but it works anyway lol (will be removed)
+        mem(65535) = &H0
         System.Console.WriteLine($"Play address is {playAddr:X4}")
         System.Console.WriteLine($"IRQ is {BitConverter.ToUInt16({mem(65534), mem(65535)})}")
         System.Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
-        NMIVec = BitConverter.ToUInt16({mem(65530), mem(65531)})
         System.Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
         cpuClockPhase = 0 ' sampleRate \ TickRate - 1
-        cpu.PC = &HFFF0
+        cpu.PC = &H0
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
         Dim phaseIncrement As Double = SIDClockRate / sampleRate
@@ -152,9 +182,9 @@ Public Class SidAudioProvider
             While sidPhase >= 1
                 If runCPU Then
                     Dim state = cpu.ExecuteOneInstruction(mem)
-                    'DisAsmState(state)
+                    'DisAsmState(state, True)
                     sidPhase -= state.CyclesConsumed
-
+                    CycleCounter += state.CyclesConsumed
                     ' Clock the SID for each CPU cycle
                     For cyc = CULng(1) To state.CyclesConsumed
                         sid.Clock()

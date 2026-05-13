@@ -66,6 +66,11 @@ Partial Class Form1
         Label7 = New Label()
         Label8 = New Label()
         SaveFileDialog1 = New SaveFileDialog()
+        CheckBox9 = New CheckBox()
+        GroupBox5 = New GroupBox()
+        TrackBar1 = New TrackBar()
+        Label9 = New Label()
+        CheckBox10 = New CheckBox()
         CType(NumericUpDown1, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox1.SuspendLayout()
         CType(NumericUpDown2, ComponentModel.ISupportInitialize).BeginInit()
@@ -76,10 +81,13 @@ Partial Class Form1
         CType(NumericUpDown5, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox4.SuspendLayout()
         CType(NumericUpDown6, ComponentModel.ISupportInitialize).BeginInit()
+        GroupBox5.SuspendLayout()
+        CType(TrackBar1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
         ' Button1
         ' 
+        Button1.FlatStyle = FlatStyle.System
         Button1.Location = New Point(12, 12)
         Button1.Name = "Button1"
         Button1.Size = New Size(92, 23)
@@ -95,10 +103,11 @@ Partial Class Form1
         ' CheckBox1
         ' 
         CheckBox1.AutoSize = True
+        CheckBox1.FlatStyle = FlatStyle.System
         CheckBox1.Location = New Point(109, 15)
         CheckBox1.Margin = New Padding(3, 2, 3, 2)
         CheckBox1.Name = "CheckBox1"
-        CheckBox1.Size = New Size(142, 19)
+        CheckBox1.Size = New Size(148, 20)
         CheckBox1.TabIndex = 1
         CheckBox1.Text = "4-bit duty cycle mode"
         CheckBox1.UseVisualStyleBackColor = True
@@ -114,7 +123,8 @@ Partial Class Form1
         ' Label1
         ' 
         Label1.AutoSize = True
-        Label1.Location = New Point(12, 38)
+        Label1.FlatStyle = FlatStyle.System
+        Label1.Location = New Point(16, 38)
         Label1.Name = "Label1"
         Label1.Size = New Size(85, 15)
         Label1.TabIndex = 3
@@ -123,8 +133,9 @@ Partial Class Form1
         ' Label2
         ' 
         Label2.AutoSize = True
-        Label2.Font = New Font("Segoe UI", 7.8F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        Label2.Location = New Point(12, 56)
+        Label2.FlatStyle = FlatStyle.System
+        Label2.Font = New Font("Segoe UI", 7.8F)
+        Label2.Location = New Point(16, 56)
         Label2.Name = "Label2"
         Label2.Size = New Size(138, 13)
         Label2.TabIndex = 4
@@ -132,6 +143,7 @@ Partial Class Form1
         ' 
         ' Button2
         ' 
+        Button2.FlatStyle = FlatStyle.System
         Button2.Location = New Point(12, 71)
         Button2.Margin = New Padding(3, 2, 3, 2)
         Button2.Name = "Button2"
@@ -148,6 +160,7 @@ Partial Class Form1
         ' Button3
         ' 
         Button3.Enabled = False
+        Button3.FlatStyle = FlatStyle.System
         Button3.Location = New Point(109, 71)
         Button3.Margin = New Padding(3, 2, 3, 2)
         Button3.Name = "Button3"
@@ -159,10 +172,11 @@ Partial Class Form1
         ' CheckBox2
         ' 
         CheckBox2.AutoSize = True
+        CheckBox2.FlatStyle = FlatStyle.System
         CheckBox2.Location = New Point(6, 18)
         CheckBox2.Margin = New Padding(3, 2, 3, 2)
         CheckBox2.Name = "CheckBox2"
-        CheckBox2.Size = New Size(108, 19)
+        CheckBox2.Size = New Size(114, 20)
         CheckBox2.TabIndex = 8
         CheckBox2.Text = "Mute channel 1"
         CheckBox2.UseVisualStyleBackColor = True
@@ -170,10 +184,11 @@ Partial Class Form1
         ' CheckBox3
         ' 
         CheckBox3.AutoSize = True
+        CheckBox3.FlatStyle = FlatStyle.System
         CheckBox3.Location = New Point(6, 41)
         CheckBox3.Margin = New Padding(3, 2, 3, 2)
         CheckBox3.Name = "CheckBox3"
-        CheckBox3.Size = New Size(108, 19)
+        CheckBox3.Size = New Size(114, 20)
         CheckBox3.TabIndex = 9
         CheckBox3.Text = "Mute channel 2"
         CheckBox3.UseVisualStyleBackColor = True
@@ -181,10 +196,11 @@ Partial Class Form1
         ' CheckBox4
         ' 
         CheckBox4.AutoSize = True
+        CheckBox4.FlatStyle = FlatStyle.System
         CheckBox4.Location = New Point(6, 63)
         CheckBox4.Margin = New Padding(3, 2, 3, 2)
         CheckBox4.Name = "CheckBox4"
-        CheckBox4.Size = New Size(108, 19)
+        CheckBox4.Size = New Size(114, 20)
         CheckBox4.TabIndex = 10
         CheckBox4.Text = "Mute channel 3"
         CheckBox4.UseVisualStyleBackColor = True
@@ -192,12 +208,13 @@ Partial Class Form1
         ' CheckBox5
         ' 
         CheckBox5.AutoSize = True
-        CheckBox5.Location = New Point(162, 218)
+        CheckBox5.FlatStyle = FlatStyle.System
+        CheckBox5.Location = New Point(157, 213)
         CheckBox5.Margin = New Padding(3, 2, 3, 2)
         CheckBox5.Name = "CheckBox5"
-        CheckBox5.Size = New Size(101, 19)
+        CheckBox5.Size = New Size(96, 20)
         CheckBox5.TabIndex = 11
-        CheckBox5.Text = "NTSC tick rate"
+        CheckBox5.Text = "NTSC mode"
         CheckBox5.UseVisualStyleBackColor = True
         ' 
         ' GroupBox1
@@ -213,6 +230,7 @@ Partial Class Form1
         GroupBox1.Controls.Add(NumericUpDown4)
         GroupBox1.Controls.Add(Label4)
         GroupBox1.Controls.Add(NumericUpDown3)
+        GroupBox1.FlatStyle = FlatStyle.System
         GroupBox1.Location = New Point(277, 9)
         GroupBox1.Margin = New Padding(3, 2, 3, 2)
         GroupBox1.Name = "GroupBox1"
@@ -226,9 +244,10 @@ Partial Class Form1
         ' 
         RadioButton5.AutoSize = True
         RadioButton5.Enabled = False
+        RadioButton5.FlatStyle = FlatStyle.System
         RadioButton5.Location = New Point(5, 152)
         RadioButton5.Name = "RadioButton5"
-        RadioButton5.Size = New Size(116, 19)
+        RadioButton5.Size = New Size(122, 20)
         RadioButton5.TabIndex = 12
         RadioButton5.Text = "Bright filter curve"
         RadioButton5.UseVisualStyleBackColor = True
@@ -238,9 +257,10 @@ Partial Class Form1
         RadioButton4.AutoSize = True
         RadioButton4.Checked = True
         RadioButton4.Enabled = False
+        RadioButton4.FlatStyle = FlatStyle.System
         RadioButton4.Location = New Point(5, 133)
         RadioButton4.Name = "RadioButton4"
-        RadioButton4.Size = New Size(127, 19)
+        RadioButton4.Size = New Size(133, 20)
         RadioButton4.TabIndex = 11
         RadioButton4.TabStop = True
         RadioButton4.Text = "Average filter curve"
@@ -250,9 +270,10 @@ Partial Class Form1
         ' 
         RadioButton3.AutoSize = True
         RadioButton3.Enabled = False
+        RadioButton3.FlatStyle = FlatStyle.System
         RadioButton3.Location = New Point(5, 114)
         RadioButton3.Name = "RadioButton3"
-        RadioButton3.Size = New Size(108, 19)
+        RadioButton3.Size = New Size(114, 20)
         RadioButton3.TabIndex = 10
         RadioButton3.Text = "Dark filter curve"
         RadioButton3.UseVisualStyleBackColor = True
@@ -260,7 +281,8 @@ Partial Class Form1
         ' Label6
         ' 
         Label6.AutoSize = True
-        Label6.Location = New Point(5, 20)
+        Label6.FlatStyle = FlatStyle.System
+        Label6.Location = New Point(9, 20)
         Label6.Name = "Label6"
         Label6.Size = New Size(95, 15)
         Label6.TabIndex = 9
@@ -281,9 +303,10 @@ Partial Class Form1
         ' CheckBox7
         ' 
         CheckBox7.AutoSize = True
+        CheckBox7.FlatStyle = FlatStyle.System
         CheckBox7.Location = New Point(122, 90)
         CheckBox7.Name = "CheckBox7"
-        CheckBox7.Size = New Size(91, 19)
+        CheckBox7.Size = New Size(97, 20)
         CheckBox7.TabIndex = 7
         CheckBox7.Text = "Disable filter"
         CheckBox7.UseVisualStyleBackColor = True
@@ -291,10 +314,11 @@ Partial Class Form1
         ' CheckBox6
         ' 
         CheckBox6.AutoSize = True
+        CheckBox6.FlatStyle = FlatStyle.System
         CheckBox6.Location = New Point(5, 90)
         CheckBox6.Margin = New Padding(3, 2, 3, 2)
         CheckBox6.Name = "CheckBox6"
-        CheckBox6.Size = New Size(111, 19)
+        CheckBox6.Size = New Size(117, 20)
         CheckBox6.TabIndex = 6
         CheckBox6.Text = "6581 filter mode"
         CheckBox6.UseVisualStyleBackColor = True
@@ -302,7 +326,8 @@ Partial Class Form1
         ' Label5
         ' 
         Label5.AutoSize = True
-        Label5.Location = New Point(5, 63)
+        Label5.FlatStyle = FlatStyle.System
+        Label5.Location = New Point(9, 63)
         Label5.Name = "Label5"
         Label5.Size = New Size(103, 15)
         Label5.TabIndex = 5
@@ -323,7 +348,8 @@ Partial Class Form1
         ' Label4
         ' 
         Label4.AutoSize = True
-        Label4.Location = New Point(5, 42)
+        Label4.FlatStyle = FlatStyle.System
+        Label4.Location = New Point(9, 42)
         Label4.Name = "Label4"
         Label4.Size = New Size(65, 15)
         Label4.TabIndex = 3
@@ -352,19 +378,21 @@ Partial Class Form1
         ' 
         GroupBox2.Controls.Add(RadioButton2)
         GroupBox2.Controls.Add(RadioButton1)
+        GroupBox2.FlatStyle = FlatStyle.System
         GroupBox2.Location = New Point(159, 98)
         GroupBox2.Name = "GroupBox2"
         GroupBox2.Size = New Size(112, 64)
         GroupBox2.TabIndex = 13
         GroupBox2.TabStop = False
-        GroupBox2.Text = "Master volume register"
+        GroupBox2.Text = "Master volume"
         ' 
         ' RadioButton2
         ' 
         RadioButton2.AutoSize = True
+        RadioButton2.FlatStyle = FlatStyle.System
         RadioButton2.Location = New Point(6, 39)
         RadioButton2.Name = "RadioButton2"
-        RadioButton2.Size = New Size(99, 19)
+        RadioButton2.Size = New Size(105, 20)
         RadioButton2.TabIndex = 1
         RadioButton2.Text = "Volume mode"
         RadioButton2.UseVisualStyleBackColor = True
@@ -373,9 +401,10 @@ Partial Class Form1
         ' 
         RadioButton1.AutoSize = True
         RadioButton1.Checked = True
+        RadioButton1.FlatStyle = FlatStyle.System
         RadioButton1.Location = New Point(6, 17)
         RadioButton1.Name = "RadioButton1"
-        RadioButton1.Size = New Size(98, 19)
+        RadioButton1.Size = New Size(104, 20)
         RadioButton1.TabIndex = 0
         RadioButton1.TabStop = True
         RadioButton1.Text = "Sample mode"
@@ -384,7 +413,8 @@ Partial Class Form1
         ' Button4
         ' 
         Button4.Enabled = False
-        Button4.Location = New Point(6, 215)
+        Button4.FlatStyle = FlatStyle.System
+        Button4.Location = New Point(370, 248)
         Button4.Name = "Button4"
         Button4.Size = New Size(51, 23)
         Button4.TabIndex = 14
@@ -393,7 +423,8 @@ Partial Class Form1
         ' 
         ' Button5
         ' 
-        Button5.Location = New Point(60, 215)
+        Button5.FlatStyle = FlatStyle.System
+        Button5.Location = New Point(424, 248)
         Button5.Name = "Button5"
         Button5.Size = New Size(91, 23)
         Button5.TabIndex = 17
@@ -405,6 +436,7 @@ Partial Class Form1
         GroupBox3.Controls.Add(NumericUpDown5)
         GroupBox3.Controls.Add(Label3)
         GroupBox3.Controls.Add(Button6)
+        GroupBox3.FlatStyle = FlatStyle.System
         GroupBox3.Location = New Point(277, 188)
         GroupBox3.Name = "GroupBox3"
         GroupBox3.Size = New Size(238, 54)
@@ -426,7 +458,8 @@ Partial Class Form1
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(85, 26)
+        Label3.FlatStyle = FlatStyle.System
+        Label3.Location = New Point(86, 26)
         Label3.Name = "Label3"
         Label3.Size = New Size(77, 15)
         Label3.TabIndex = 2
@@ -434,6 +467,7 @@ Partial Class Form1
         ' 
         ' Button6
         ' 
+        Button6.FlatStyle = FlatStyle.System
         Button6.Location = New Point(6, 22)
         Button6.Name = "Button6"
         Button6.Size = New Size(75, 23)
@@ -444,10 +478,11 @@ Partial Class Form1
         ' CheckBox8
         ' 
         CheckBox8.AutoSize = True
+        CheckBox8.FlatStyle = FlatStyle.System
         CheckBox8.Location = New Point(6, 86)
         CheckBox8.Margin = New Padding(3, 2, 3, 2)
         CheckBox8.Name = "CheckBox8"
-        CheckBox8.Size = New Size(100, 19)
+        CheckBox8.Size = New Size(106, 20)
         CheckBox8.TabIndex = 19
         CheckBox8.Text = "Mute samples"
         CheckBox8.UseVisualStyleBackColor = True
@@ -458,6 +493,7 @@ Partial Class Form1
         GroupBox4.Controls.Add(CheckBox8)
         GroupBox4.Controls.Add(CheckBox2)
         GroupBox4.Controls.Add(CheckBox4)
+        GroupBox4.FlatStyle = FlatStyle.System
         GroupBox4.Location = New Point(6, 98)
         GroupBox4.Name = "GroupBox4"
         GroupBox4.Size = New Size(144, 111)
@@ -478,7 +514,8 @@ Partial Class Form1
         ' Label7
         ' 
         Label7.AutoSize = True
-        Label7.Location = New Point(156, 165)
+        Label7.FlatStyle = FlatStyle.System
+        Label7.Location = New Point(160, 165)
         Label7.Name = "Label7"
         Label7.Size = New Size(55, 15)
         Label7.TabIndex = 21
@@ -497,11 +534,70 @@ Partial Class Form1
         ' 
         SaveFileDialog1.Filter = "Wave files|*.wav|All files|*"
         ' 
+        ' CheckBox9
+        ' 
+        CheckBox9.AutoSize = True
+        CheckBox9.FlatStyle = FlatStyle.System
+        CheckBox9.Location = New Point(6, 18)
+        CheckBox9.Name = "CheckBox9"
+        CheckBox9.Size = New Size(106, 20)
+        CheckBox9.TabIndex = 13
+        CheckBox9.Text = "Volume graph"
+        CheckBox9.UseVisualStyleBackColor = True
+        ' 
+        ' GroupBox5
+        ' 
+        GroupBox5.Controls.Add(CheckBox9)
+        GroupBox5.FlatStyle = FlatStyle.System
+        GroupBox5.Location = New Point(6, 212)
+        GroupBox5.Name = "GroupBox5"
+        GroupBox5.Size = New Size(144, 46)
+        GroupBox5.TabIndex = 23
+        GroupBox5.TabStop = False
+        GroupBox5.Text = "PSG View"
+        ' 
+        ' TrackBar1
+        ' 
+        TrackBar1.LargeChange = 20
+        TrackBar1.Location = New Point(260, 244)
+        TrackBar1.Maximum = 100
+        TrackBar1.Name = "TrackBar1"
+        TrackBar1.Size = New Size(104, 45)
+        TrackBar1.SmallChange = 5
+        TrackBar1.TabIndex = 24
+        TrackBar1.TickFrequency = 10
+        TrackBar1.Value = 100
+        ' 
+        ' Label9
+        ' 
+        Label9.AutoSize = True
+        Label9.FlatStyle = FlatStyle.System
+        Label9.Location = New Point(166, 250)
+        Label9.Name = "Label9"
+        Label9.Size = New Size(91, 15)
+        Label9.TabIndex = 25
+        Label9.Text = "Output volume:"
+        ' 
+        ' CheckBox10
+        ' 
+        CheckBox10.AutoSize = True
+        CheckBox10.FlatStyle = FlatStyle.System
+        CheckBox10.Location = New Point(6, 277)
+        CheckBox10.Name = "CheckBox10"
+        CheckBox10.Size = New Size(427, 20)
+        CheckBox10.TabIndex = 26
+        CheckBox10.Text = "enable variable delay linear pcm capture algorithm filesystem writer stream"
+        CheckBox10.UseVisualStyleBackColor = True
+        ' 
         ' Form1
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(521, 246)
+        ClientSize = New Size(520, 301)
+        Controls.Add(CheckBox10)
+        Controls.Add(Label9)
+        Controls.Add(TrackBar1)
+        Controls.Add(GroupBox5)
         Controls.Add(Label8)
         Controls.Add(Label7)
         Controls.Add(NumericUpDown6)
@@ -538,6 +634,9 @@ Partial Class Form1
         GroupBox4.ResumeLayout(False)
         GroupBox4.PerformLayout()
         CType(NumericUpDown6, ComponentModel.ISupportInitialize).EndInit()
+        GroupBox5.ResumeLayout(False)
+        GroupBox5.PerformLayout()
+        CType(TrackBar1, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -584,5 +683,10 @@ Partial Class Form1
     Friend WithEvents Label7 As Label
     Friend WithEvents Label8 As Label
     Friend WithEvents SaveFileDialog1 As SaveFileDialog
+    Friend WithEvents CheckBox9 As CheckBox
+    Friend WithEvents GroupBox5 As GroupBox
+    Friend WithEvents TrackBar1 As TrackBar
+    Friend WithEvents Label9 As Label
+    Friend WithEvents CheckBox10 As CheckBox
 
 End Class

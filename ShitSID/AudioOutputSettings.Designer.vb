@@ -22,6 +22,7 @@ Partial Class AudioOutputSettings
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(AudioOutputSettings))
         Label3 = New Label()
         ComboBox1 = New ComboBox()
         CheckBox1 = New CheckBox()
@@ -30,7 +31,8 @@ Partial Class AudioOutputSettings
         ' Label3
         ' 
         Label3.AutoSize = True
-        Label3.Location = New Point(12, 9)
+        Label3.FlatStyle = FlatStyle.System
+        Label3.Location = New Point(16, 9)
         Label3.Name = "Label3"
         Label3.Size = New Size(72, 15)
         Label3.TabIndex = 18
@@ -38,6 +40,7 @@ Partial Class AudioOutputSettings
         ' 
         ' ComboBox1
         ' 
+        ComboBox1.FlatStyle = FlatStyle.System
         ComboBox1.FormattingEnabled = True
         ComboBox1.Items.AddRange(New Object() {"8000", "11025", "16000", "22050", "32000", "44100", "48000", "64000", "65536", "88200", "96000", "176400", "192000"})
         ComboBox1.Location = New Point(90, 6)
@@ -51,9 +54,10 @@ Partial Class AudioOutputSettings
         CheckBox1.AutoSize = True
         CheckBox1.Checked = True
         CheckBox1.CheckState = CheckState.Checked
+        CheckBox1.FlatStyle = FlatStyle.System
         CheckBox1.Location = New Point(12, 35)
         CheckBox1.Name = "CheckBox1"
-        CheckBox1.Size = New Size(160, 19)
+        CheckBox1.Size = New Size(166, 20)
         CheckBox1.TabIndex = 19
         CheckBox1.Text = "Enable audio output filter"
         CheckBox1.UseVisualStyleBackColor = True
@@ -66,6 +70,7 @@ Partial Class AudioOutputSettings
         Controls.Add(CheckBox1)
         Controls.Add(Label3)
         Controls.Add(ComboBox1)
+        Icon = CType(resources.GetObject("$this.Icon"), Icon)
         Name = "AudioOutputSettings"
         Text = "Audio output settings"
         ResumeLayout(False)

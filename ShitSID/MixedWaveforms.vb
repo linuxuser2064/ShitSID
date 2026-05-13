@@ -2752,5 +2752,4 @@
 	&HFC, &HFC, &HFC, &HFC, &HFE, &HFE, &HFE, &HFE, &HFE, &HFF, &HFF, &HFF,
 	&HFF, &HFF, &HFF, &HFF
 }
-
 End Class

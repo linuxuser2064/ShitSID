@@ -53,17 +53,45 @@
         Next
     End Sub
     Public Function LowPassSample(x As Double, cutoffFreq As Double, sampleRate As Double) As Double
-        Static lastOutput As Double = 0 ' persists across calls
+        ' Low-pass state
+        Static lpLastOutput As Double = 0
+
+        ' High-pass state
+        Static hpLastOutput As Double = 0
+        Static hpLastInput As Double = 0
+
+        ' ----- LOW PASS -----
+        Dim lpOut As Double
+
         If sampleRate > cutoffFreq * 2 Then
             Dim dt As Double = 1.0 / sampleRate
             Dim rc As Double = 1.0 / (2 * Math.PI * cutoffFreq)
             Dim alpha As Double = dt / (rc + dt)
 
-            lastOutput += alpha * (x - lastOutput)
-            Return lastOutput
+            lpLastOutput += alpha * (x - lpLastOutput)
+            lpOut = lpLastOutput
         Else
-            Return x
+            lpOut = x
         End If
+
+        ' ----- HIGH PASS (fixed 10 Hz) -----
+        Dim hpCutoff As Double = 10.0
+        Dim hpOut As Double
+
+        If sampleRate > hpCutoff * 2 Then
+            Dim dt As Double = 1.0 / sampleRate
+            Dim rc As Double = 1.0 / (2 * Math.PI * hpCutoff)
+            Dim alpha As Double = rc / (rc + dt)
+
+            hpOut = alpha * (hpLastOutput + lpOut - hpLastInput)
+
+            hpLastInput = lpOut
+            hpLastOutput = hpOut
+        Else
+            hpOut = lpOut
+        End If
+
+        Return hpOut
     End Function
     Public Function GetSample() As Double
         Dim output As Double = 0
@@ -93,7 +121,7 @@
         output /= 4
         'output = output - (output * output) ' holy distortion
         If InternalAudioFilter Then
-            Return LowPassSample(output, 17640, SampleRate)
+            Return LowPassSample(output, 20154, SampleRate)
         Else
             Return output
         End If

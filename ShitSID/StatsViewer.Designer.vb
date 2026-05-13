@@ -44,6 +44,7 @@ Partial Class StatsViewer
         ' Label1
         ' 
         Label1.Dock = DockStyle.Fill
+        Label1.FlatStyle = FlatStyle.System
         Label1.Font = New Font("Consolas", 9F)
         Label1.Location = New Point(3, 18)
         Label1.Name = "Label1"
@@ -79,6 +80,7 @@ Partial Class StatsViewer
         ' 
         GroupBox4.Controls.Add(Label4)
         GroupBox4.Dock = DockStyle.Fill
+        GroupBox4.FlatStyle = FlatStyle.System
         GroupBox4.Location = New Point(439, 238)
         GroupBox4.Margin = New Padding(3, 2, 3, 2)
         GroupBox4.Name = "GroupBox4"
@@ -91,6 +93,7 @@ Partial Class StatsViewer
         ' Label4
         ' 
         Label4.Dock = DockStyle.Fill
+        Label4.FlatStyle = FlatStyle.System
         Label4.Font = New Font("Consolas", 9F)
         Label4.Location = New Point(3, 18)
         Label4.Name = "Label4"
@@ -102,6 +105,7 @@ Partial Class StatsViewer
         ' 
         GroupBox3.Controls.Add(Label3)
         GroupBox3.Dock = DockStyle.Fill
+        GroupBox3.FlatStyle = FlatStyle.System
         GroupBox3.Location = New Point(3, 238)
         GroupBox3.Margin = New Padding(3, 2, 3, 2)
         GroupBox3.Name = "GroupBox3"
@@ -114,6 +118,7 @@ Partial Class StatsViewer
         ' Label3
         ' 
         Label3.Dock = DockStyle.Fill
+        Label3.FlatStyle = FlatStyle.System
         Label3.Font = New Font("Consolas", 9F)
         Label3.Location = New Point(3, 18)
         Label3.Name = "Label3"
@@ -125,6 +130,7 @@ Partial Class StatsViewer
         ' 
         GroupBox2.Controls.Add(Label2)
         GroupBox2.Dock = DockStyle.Fill
+        GroupBox2.FlatStyle = FlatStyle.System
         GroupBox2.Location = New Point(439, 2)
         GroupBox2.Margin = New Padding(3, 2, 3, 2)
         GroupBox2.Name = "GroupBox2"
@@ -137,6 +143,7 @@ Partial Class StatsViewer
         ' Label2
         ' 
         Label2.Dock = DockStyle.Fill
+        Label2.FlatStyle = FlatStyle.System
         Label2.Font = New Font("Consolas", 9F)
         Label2.Location = New Point(3, 18)
         Label2.Name = "Label2"
@@ -148,6 +155,7 @@ Partial Class StatsViewer
         ' 
         GroupBox1.Controls.Add(Label1)
         GroupBox1.Dock = DockStyle.Fill
+        GroupBox1.FlatStyle = FlatStyle.System
         GroupBox1.Location = New Point(3, 2)
         GroupBox1.Margin = New Padding(3, 2, 3, 2)
         GroupBox1.Name = "GroupBox1"

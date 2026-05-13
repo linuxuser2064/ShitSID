@@ -2,9 +2,7 @@
 Imports Highbyte.DotNet6502
 Imports System.IO
 Imports NAudio.CoreAudioApi
-Imports System.Runtime.InteropServices
 Imports NAudio.MediaFoundation
-Imports FFMediaToolkit.Decoding
 Imports FFMediaToolkit.Encoding
 Public Class Form1
     Public SAMPLERATE As Integer = 88200
@@ -71,7 +69,9 @@ Public Class Form1
             NumericUpDown6.Value = 60
         End If
         PSGViewer = New PSGView(sid)
+        PSGViewer.ShowPCMGraph = CheckBox9.Checked
         provider = New SidAudioProvider(sid, cpu, mem, PSGViewer, SAMPLERATE)
+        provider.Volume = TrackBar1.Value / 100
         AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
         provider.TickRate = NumericUpDown6.Value
         provider.UseNTSC = CheckBox5.Checked
@@ -310,5 +310,15 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         FastBitmapRenderer.RenderBitmapOnForm(PSGViewFormHandle, frame, 0, 0)
         frame.Dispose()
         'FastBitmapRenderer.RenderBitmapStretched(PSGViewFormHandle, frame, 0, 0, New Drawing.Size(512, 512))
+    End Sub
+
+    Private Sub CheckBox9_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox9.CheckedChanged
+        If PSGViewer Is Nothing Then Exit Sub
+        PSGViewer.ShowPCMGraph = CheckBox9.Checked
+    End Sub
+
+    Private Sub TrackBar1_Scroll(sender As Object, e As EventArgs) Handles TrackBar1.Scroll
+        If provider Is Nothing Then Exit Sub
+        provider.Volume = TrackBar1.Value / 100
     End Sub
 End Class
