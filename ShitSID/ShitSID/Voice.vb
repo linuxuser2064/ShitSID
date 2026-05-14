@@ -52,7 +52,7 @@
         Dim wave As Double
 
         If (Control And &H8) <> 0 Then ' test bit
-            Return Envelope.Output / 255.0
+            phase = 0
         End If
 
         ' sync/ringmod stuff
