@@ -2,7 +2,6 @@
     Private lfsr As New SidNoiseLFSR
     Public MuteVoice As Boolean = False
     Public LoFiDuty As Boolean = False
-    Public Frequency As Double = 0
     Public FreqLo As Byte
     Public FreqHi As Byte
     Public Control As Byte
@@ -12,13 +11,14 @@
     Public PulseWidthHi As Byte = 0
     Public UseFilter As Boolean = False
     Public Envelope As New EnvelopeGenerator()
-    Private lastNoiseUpdate As Double = 0
-    Private currentNoise As Double = 0
+    Private prevNoiseClock As Integer
+    Private currentNoise As Integer
     Private Index As Int32
     Private Parent As ShitSID
-    Private phase As Double = 0.0
-    Private lastTime As Double = 0.0
+    Private phase As Int32 = 0 ' actually 24-bit
+    'Private lastTime As Double = 0.0
     Private prevMasterMSB As Boolean = False
+    Private lastOutput As Double = 0
     ' 24-bit accumulator for SID-accurate phase timing
     Public Sub New(parent As ShitSID, i As Int32)
         Me.Parent = parent
@@ -35,38 +35,25 @@
             DutyCycle = Math.Max(0.0, Math.Min(1.0, pulseVal / 4095.0))
         End If
     End Sub
-
-    ' SID pitch formula: freq = (fregval * clock) / 16777216
-    Public Sub UpdateFrequency()
-
-        Dim NewFreqHi As Byte = FreqHi
-        Dim NewFreqLo As Byte = FreqLo
-        Dim freqVal = (CUInt(NewFreqHi) << 8) Or CUInt(NewFreqLo)
-        Dim actualFrequency = freqVal * 985248.0 / 16777216.0
-        Frequency = actualFrequency
-        'Frequency = Math.Round(Frequency / 10) * 10
-    End Sub
-    Public Function GenerateNoEnvelope(time As Double) As Double
-        Dim deltaTime As Double = time - lastTime
-        lastTime = time
-        Dim wave As Double
-
+    Public Sub Clock()
+        ' phase accumulator (16777215 max)
+        Dim accumulated = (CUInt(FreqHi) << 8) Or CUInt(FreqLo)
+        phase += accumulated
+        phase = phase Mod 16777216
         If (Control And &H8) <> 0 Then ' test bit
             phase = 0
         End If
+    End Sub
+    Public Function GenerateNoEnvelope() As Double
+        Dim wave As Double = 0
 
         ' sync/ringmod stuff
         Dim sourceIndex As Integer = (Me.Index + 2) Mod 3
         Dim sourceVoice = Me.Parent.Voices(sourceIndex)
 
-        Dim newFrequency = Frequency
-
-        ' phase accumulator
-        phase += newFrequency * deltaTime
-        phase = phase Mod 1.0
 
         ' new 12 bit phase
-        Dim acc As Integer = CInt(phase * &HFFF) ' 3 nybbles looks cursed
+        Dim acc As Integer = (phase >> 12) And &HFFF
         ' sid accurate waveform generation
         Dim sawVal As Integer = acc
         Dim triVal As Integer = (acc << 1) And &HFFF
@@ -76,6 +63,8 @@
         Dim pulseVal As Integer = If(acc > DutyCycle * &HFFF, &HFFF, 0)
 
         Dim dacInput As Integer = 0
+        Dim accumulated = (CUInt(FreqHi) << 8) Or CUInt(FreqLo)
+        Dim noWaveform As Boolean = False
         Select Case Waveform
             Case "saw"
                 dacInput = sawVal
@@ -84,12 +73,14 @@
             Case "pulse"
                 dacInput = pulseVal
             Case "noise"
-                Dim cycleDuration As Double = 1.0 / Frequency
-                Dim interval As Double = cycleDuration / 16.0
-                If time - lastNoiseUpdate >= interval Then
-                    lastNoiseUpdate = time
-                    currentNoise = lfsr.Read(acc) 'rand.NextDouble() * 2 - 1
+                Dim noiseClock As Integer = (phase >> 19) And 1
+
+                If prevNoiseClock = 0 AndAlso noiseClock = 1 Then
+                    currentNoise = lfsr.Read(acc)
                 End If
+
+                prevNoiseClock = noiseClock
+
                 dacInput = currentNoise
             Case "saw+tri"
                 If Parent.Filter.Mode6581 Then
@@ -116,34 +107,38 @@
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
                 End If
             Case Else
-                dacInput = 0
+                noWaveform = True
         End Select
         ' xor ringmod
         If Waveform = "tri" AndAlso (Control And &H4) Then
-            If sourceVoice.phase >= 0.5 Then
+            If sourceVoice.phase >= 8388608 Then
                 dacInput = 4095 - dacInput
             End If
         End If
         If (Waveform = "saw+tri" Or Waveform = "tri+pulse" Or Waveform = "saw+pulse" Or Waveform = "saw+tri+pulse") AndAlso (Control And &H4) Then
-            If sourceVoice.phase >= 0.5 Then
-                dacInput *= 0
+            If sourceVoice.phase >= 8388608 Then
+                dacInput = 0
             End If
         End If
         ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
         wave = (dacInput / &HFFF) * 2.0 - 1.0
+        If noWaveform Then
+            wave = lastOutput
+        End If
         '  hardsync
-        Dim masterPhaseMSB As Boolean = (sourceVoice.phase >= 0.5)
+        Dim masterPhaseMSB As Boolean = (sourceVoice.phase >= 8388608)
         If (Control And &H2) <> 0 Then
             If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
-                Me.phase = 0.0
+                Me.phase = 0
             End If
         End If
         prevMasterMSB = masterPhaseMSB
+        lastOutput = wave
         Return wave
     End Function
-    Public Function Generate(time As Double) As Double
+    Public Function Generate() As Double
         Dim envLevel = Envelope.Output / 255.0
-        Dim output = GenerateNoEnvelope(time) * envLevel
+        Dim output = GenerateNoEnvelope() * envLevel
 
         If MuteVoice Then Return 0
         Return output

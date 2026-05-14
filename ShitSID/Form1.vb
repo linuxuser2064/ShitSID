@@ -6,12 +6,10 @@ Imports NAudio.MediaFoundation
 Imports FFMediaToolkit.Encoding
 Public Class Form1
     Public SAMPLERATE As Integer = 88200
+    Public sidDump As SidTraceReader
     Public sid As ShitSID
-    Public sidfile As SidFile
     Public fakeClockCount = 0
-    Public cpu As New CPU
     Dim delayMS = 20 ' this does not work
-    Public mem As New Memory(65536)
     Private waveOut As WasapiOut = Nothing
     Private WithEvents provider As SidAudioProvider = Nothing
     Private PSGViewer As PSGView
@@ -32,19 +30,17 @@ Public Class Form1
     Private Sub LoadSID()
         ' Reinitialize components
         sid = New ShitSID(SAMPLERATE)
-        'cpu.SP = 1
-        mem(1) = &H37
-        SidFile = SidFile.Load(OpenFileDialog1.FileName)
-        If SidFile.FlagBits(2) = False AndAlso SidFile.FlagBits(3) = True Then
-            mem(&H2A6) = 1 ' PAL
-        End If
+        sidDump = New SidTraceReader(OpenFileDialog1.FileName)
+        'If SidFile.FlagBits(2) = False AndAlso SidFile.FlagBits(3) = True Then
+        '    mem(&H2A6) = 1 ' PAL
+        'End If
 
         ' Set song number from UI or default
-        If NumericUpDown1.Value > 0 Then
-            cpu.A = NumericUpDown1.Value - 1
-        Else
-            cpu.A = SidFile.StartSong - 1
-        End If
+        'If NumericUpDown1.Value > 0 Then
+        '    cpu.A = NumericUpDown1.Value - 1
+        'Else
+        '    cpu.A = SidFile.StartSong - 1
+        'End If
         sid.Voices(0).MuteVoice = CheckBox2.Checked
         sid.Voices(1).MuteVoice = CheckBox3.Checked
         sid.Voices(2).MuteVoice = CheckBox4.Checked
@@ -63,29 +59,29 @@ Public Class Form1
         If RadioButton4.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Average
         If RadioButton5.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Bright
         CheckBox6_CheckedChanged(Nothing, Nothing)
-        cpu.PC = SidFile.InitAddress
-        Console.WriteLine($"Init address: {SidFile.InitAddress.ToString("X4")}")
+        'cpu.PC = SidFile.InitAddress
+        'Console.WriteLine($"Init address: {SidFile.InitAddress.ToString("X4")}")
         If CheckBox5.Checked Then
             NumericUpDown6.Value = 60
         End If
         PSGViewer = New PSGView(sid)
         PSGViewer.ShowPCMGraph = CheckBox9.Checked
-        provider = New SidAudioProvider(sid, cpu, mem, PSGViewer, SAMPLERATE)
+        provider = New SidAudioProvider(sidDump, sid, PSGViewer, SAMPLERATE)
         provider.Volume = TrackBar1.Value / 100
         AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
-        provider.TickRate = NumericUpDown6.Value
-        provider.UseNTSC = CheckBox5.Checked
+        'provider.TickRate = NumericUpDown6.Value
+        'provider.UseNTSC = CheckBox5.Checked
         PSGViewForm.Show()
         PSGViewFormHandle = PSGViewForm.Handle
     End Sub
     Public Sub PlaySID()
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
-        provider.sidfile = sidfile
-        provider.InitSIDFile()
+        'provider.sidfile = sidfile
+        'provider.InitSIDFile()
         waveOut.Init(provider)
         waveOut.Play()
         'PSGViewTimer.Start()
-        provider.runCPU = True
+        'provider.runCPU = True
         For Each x As Control In Me.Controls
             x.Enabled = True
         Next
@@ -113,14 +109,14 @@ Public Class Form1
         OpenFileDialog2.ShowDialog()
     End Sub
 
-    Private Sub OpenFileDialog2_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog2.FileOk
-        Dim out = ""
-        Dim newSidfile = SidFile.Load(OpenFileDialog2.FileName)
-        MsgBox($"{Path.GetFileName(OpenFileDialog2.FileName)} info:
-Song name: {newSidfile.SongName} by {newSidfile.SongArtist}
-Released by: {newSidfile.SongStudio}
-Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
-    End Sub
+    '    Private Sub OpenFileDialog2_FileOk(sender As Object, e As System.ComponentModel.CancelEventArgs) Handles OpenFileDialog2.FileOk
+    '        Dim out = ""
+    '        Dim newSidfile = SidFile.Load(OpenFileDialog2.FileName)
+    '        MsgBox($"{Path.GetFileName(OpenFileDialog2.FileName)} info:
+    'Song name: {newSidfile.SongName} by {newSidfile.SongArtist}
+    'Released by: {newSidfile.SongStudio}
+    'Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
+    '    End Sub
 
     Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
         StatsViewer.Show()
@@ -147,17 +143,17 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         End If
     End Sub
 
-    Private Sub CheckBox5_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox5.CheckedChanged
-        If sid IsNot Nothing Then
-            If CheckBox5.Checked Then
-                NumericUpDown6.Value = 60
-            Else
-                NumericUpDown6.Value = 50
-            End If
-            provider.TickRate = NumericUpDown6.Value
-            provider.UseNTSC = CheckBox5.Checked
-        End If
-    End Sub
+    'Private Sub CheckBox5_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox5.CheckedChanged
+    '    If sid IsNot Nothing Then
+    '        If CheckBox5.Checked Then
+    '            NumericUpDown6.Value = 60
+    '        Else
+    '            NumericUpDown6.Value = 50
+    '        End If
+    '        provider.TickRate = NumericUpDown6.Value
+    '        provider.UseNTSC = CheckBox5.Checked
+    '    End If
+    'End Sub
 
     Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown3.ValueChanged
         If sid IsNot Nothing Then
@@ -187,13 +183,13 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         RadioButton5.Enabled = CheckBox6.Checked
     End Sub
     Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
-#If DEBUG Then
-        Using fs As New FileStream("ramdump.bin", FileMode.Create, FileAccess.Write)
-            For i = 0 To 65535
-                fs.WriteByte(mem(i))
-            Next
-        End Using
-#End If
+        '#If DEBUG Then
+        '        Using fs As New FileStream("ramdump.bin", FileMode.Create, FileAccess.Write)
+        '            For i = 0 To 65535
+        '                fs.WriteByte(mem(i))
+        '            Next
+        '        End Using
+        '#End If
         'provider.sid.Filter.fs.Dispose()
     End Sub
 
@@ -243,8 +239,8 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         LoadSID()
         RemoveHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
         AddHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
-        provider.sidfile = sidfile
-        provider.InitSIDFile()
+        'provider.sidfile = sidfile
+        'provider.InitSIDFile()
         Console.WriteLine("Creating MediaType...")
         Dim type As New MediaType(provider.WaveFormat)
         Console.WriteLine("Creating MF encoder...")
@@ -258,7 +254,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         EncodeVid = MediaBuilder.CreateContainer(Path.Combine(outputFolder, $"{outputFileNoExt}.mp4"), ContainerFormat.MP4).
             WithVideo(opts).Create
         Console.WriteLine("Encoding...")
-        provider.runCPU = True
+        'provider.runCPU = True
         wavProv.Encode(Path.Combine(outputFolder, $"{outputFileNoExt}.wav"), provider.Take(TimeSpan.FromSeconds(NumericUpDown5.Value)).ToWaveProvider)
         EncodeVid.Dispose()
         Console.WriteLine("Done")
@@ -273,7 +269,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         Try
             Console.WriteLine($"Video time: {stamp.ToString}")
             BitmapToImageData.BMPtoBitmapData.AddBitmapFrame(EncodeVid, data)
-            stamp = stamp.Add(TimeSpan.FromMilliseconds(1000 / provider.TickRate)) ' hardcoded ahh
+            stamp = stamp.Add(TimeSpan.FromMilliseconds(1000 / 50)) ' hardcoded ahh
             'Application.DoEvents()
         Catch ex As Exception
             Console.WriteLine(ex.ToString)
@@ -298,11 +294,11 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         End If
     End Sub
 
-    Private Sub NumericUpDown6_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown6.ValueChanged
-        If sid IsNot Nothing AndAlso provider IsNot Nothing Then
-            provider.TickRate = NumericUpDown6.Value
-        End If
-    End Sub
+    'Private Sub NumericUpDown6_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown6.ValueChanged
+    '    If sid IsNot Nothing AndAlso provider IsNot Nothing Then
+    '        provider.TickRate = NumericUpDown6.Value
+    '    End If
+    'End Sub
     Private Sub provider_PSGViewFrame(frame As Bitmap)
         If PSGViewForm Is Nothing Then Exit Sub
         If PSGViewForm.IsDisposed Then Exit Sub

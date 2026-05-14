@@ -72,7 +72,10 @@ Public Class PSGView
         g.DrawString("Pitch:", CommonFont, Brushes.White, cX(2), cY(34 + yOffset))
         ' ---
         Const magic = 2.30102999566
-        Dim filledD As Double = 160.0 * (Math.Log10(SID.Voices(idx).Frequency / 20) / magic)
+        Dim freqVal = (CUInt(SID.Voices(idx).FreqHi) << 8) Or CUInt(SID.Voices(idx).FreqLo)
+        Dim actualFrequency = freqVal * 0.0587253570557
+
+        Dim filledD As Double = 160.0 * (Math.Log10(actualFrequency / 20) / magic)
         If filledD = Double.NegativeInfinity Then filledD = 0
         If filledD < 0 Then filledD = 0
         g.FillRectangle(ScrollbarForegroundBrush, 35, 34 + yOffset, CInt(filledD), 7)
@@ -81,7 +84,7 @@ Public Class PSGView
 
         g.DrawRectangle(ScrollbarTrackOuterPen, 35 + CInt(filledD) - 1, 33 + yOffset, 2, 9)
         g.DrawLine(ScrollbarTrackInnerPen, 35 + CInt(filledD), 34 + yOffset, 35 + CInt(filledD), 41 + yOffset)
-        g.DrawString(Math.Round(SID.Voices(idx).Frequency, 1), CommonFont, Brushes.White, cX(200), cY(34 + yOffset))
+        g.DrawString(Math.Round(actualFrequency, 1), CommonFont, Brushes.White, cX(200), cY(34 + yOffset))
         g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(34 + yOffset))
 
         g.DrawString("ADSR:", CommonFont, Brushes.White, cX(2), cY(44 + yOffset))

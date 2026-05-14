@@ -92,13 +92,13 @@ Partial Class Form1
         Button1.Name = "Button1"
         Button1.Size = New Size(92, 23)
         Button1.TabIndex = 0
-        Button1.Text = "Load SID file"
+        Button1.Text = "Load SID dump"
         Button1.UseVisualStyleBackColor = True
         ' 
         ' OpenFileDialog1
         ' 
         OpenFileDialog1.FileName = "OpenFileDialog1"
-        OpenFileDialog1.Filter = "SID files|*.SID|All files|*"
+        OpenFileDialog1.Filter = "SID dumps|*.csv|All files|*"
         ' 
         ' CheckBox1
         ' 
@@ -119,6 +119,7 @@ Partial Class Form1
         NumericUpDown1.Name = "NumericUpDown1"
         NumericUpDown1.Size = New Size(131, 23)
         NumericUpDown1.TabIndex = 2
+        NumericUpDown1.Visible = False
         ' 
         ' Label1
         ' 
@@ -129,6 +130,7 @@ Partial Class Form1
         Label1.Size = New Size(85, 15)
         Label1.TabIndex = 3
         Label1.Text = "Song number: "
+        Label1.Visible = False
         ' 
         ' Label2
         ' 
@@ -140,6 +142,7 @@ Partial Class Form1
         Label2.Size = New Size(138, 13)
         Label2.TabIndex = 4
         Label2.Text = "(number 0 means default)"
+        Label2.Visible = False
         ' 
         ' Button2
         ' 
@@ -151,6 +154,7 @@ Partial Class Form1
         Button2.TabIndex = 5
         Button2.Text = "View info"
         Button2.UseVisualStyleBackColor = True
+        Button2.Visible = False
         ' 
         ' OpenFileDialog2
         ' 
@@ -216,6 +220,7 @@ Partial Class Form1
         CheckBox5.TabIndex = 11
         CheckBox5.Text = "NTSC mode"
         CheckBox5.UseVisualStyleBackColor = True
+        CheckBox5.Visible = False
         ' 
         ' GroupBox1
         ' 
@@ -510,6 +515,7 @@ Partial Class Form1
         NumericUpDown6.Size = New Size(94, 23)
         NumericUpDown6.TabIndex = 13
         NumericUpDown6.Value = New Decimal(New Integer() {50, 0, 0, 0})
+        NumericUpDown6.Visible = False
         ' 
         ' Label7
         ' 
@@ -520,6 +526,7 @@ Partial Class Form1
         Label7.Size = New Size(55, 15)
         Label7.TabIndex = 21
         Label7.Text = "Tick rate:"
+        Label7.Visible = False
         ' 
         ' Label8
         ' 
@@ -529,6 +536,7 @@ Partial Class Form1
         Label8.Size = New Size(21, 15)
         Label8.TabIndex = 22
         Label8.Text = "Hz"
+        Label8.Visible = False
         ' 
         ' SaveFileDialog1
         ' 

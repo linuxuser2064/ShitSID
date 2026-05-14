@@ -49,6 +49,7 @@
     Public Sub Clock()
         CurrentTime += 1.0 / ClocksPerFrame
         For i = 0 To 2
+            Voices(i).Clock()
             Voices(i).Envelope.Clock()
         Next
     End Sub
@@ -98,7 +99,7 @@
         Dim filterInput As Double = 0
         For i = 0 To 2
             Dim v = Voices(i)
-            Dim generated = v.Generate(CurrentTime) ' generate anyway for ringmod accuracy
+            Dim generated = v.Generate() ' generate anyway for ringmod accuracy
             If v.UseFilter AndAlso BypassFilter = False Then
                 filterInput += generated
             Else
@@ -130,7 +131,7 @@
     Public Function ReadRegister(addr As Integer) As Byte
         Select Case addr
             Case 54299
-                Return (Voices(2).GenerateNoEnvelope(CurrentTime) * 96) + 127
+                Return (Voices(2).GenerateNoEnvelope() * 96) + 127
             Case 54300
                 Return Voices(2).Envelope.Output
             Case Else
@@ -182,10 +183,8 @@
         Select Case subReg
             Case 0 ' FREQ LO
                 voice.FreqLo = value
-                voice.UpdateFrequency()
             Case 1 ' FREQ HI
                 voice.FreqHi = value
-                voice.UpdateFrequency()
             Case 2 ' PW LO
                 voice.PulseWidthLo = value
                 voice.UpdateDutyCycle()
