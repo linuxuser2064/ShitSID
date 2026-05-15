@@ -5,7 +5,7 @@ Imports NAudio.CoreAudioApi
 Imports NAudio.MediaFoundation
 Imports FFMediaToolkit.Encoding
 Public Class Form1
-    Public SAMPLERATE As Integer = 96000
+    Public SAMPLERATE As Integer = 176400
     Public sid As ShitSID
     Public sidfile As SidFile
     Public fakeClockCount = 0
@@ -276,6 +276,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             End If
             If RadioButton4.Checked Then
                 sid.Filter.setCurveAndDistortionDefaults()
+                sid.Filter.setCurveProperties(1147036.4394268463, 274228796.97550374, 1.0066634233403395, 16125.154840564108)
             End If
             If RadioButton5.Checked Then
                 sid.Filter.setCurveAndDistortionDefaults()

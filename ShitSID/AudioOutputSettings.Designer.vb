@@ -47,7 +47,7 @@ Partial Class AudioOutputSettings
         ComboBox1.Name = "ComboBox1"
         ComboBox1.Size = New Size(121, 23)
         ComboBox1.TabIndex = 17
-        ComboBox1.Text = "88200"
+        ComboBox1.Text = "176400"
         ' 
         ' CheckBox1
         ' 

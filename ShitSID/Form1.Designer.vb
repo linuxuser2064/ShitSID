@@ -310,7 +310,7 @@ Partial Class Form1
         NumericUpDown2.Name = "NumericUpDown2"
         NumericUpDown2.Size = New Size(83, 23)
         NumericUpDown2.TabIndex = 8
-        NumericUpDown2.Value = New Decimal(New Integer() {11470365, 0, 0, 65536})
+        NumericUpDown2.Value = New Decimal(New Integer() {11470364, 0, 0, 65536})
         ' 
         ' CheckBox7
         ' 
@@ -357,7 +357,7 @@ Partial Class Form1
         NumericUpDown4.Name = "NumericUpDown4"
         NumericUpDown4.Size = New Size(83, 23)
         NumericUpDown4.TabIndex = 4
-        NumericUpDown4.Value = New Decimal(New Integer() {100666344, 0, 0, 524288})
+        NumericUpDown4.Value = New Decimal(New Integer() {-309274621, 2343820, 0, 1048576})
         ' 
         ' Label4
         ' 
@@ -378,7 +378,7 @@ Partial Class Form1
         NumericUpDown3.Name = "NumericUpDown3"
         NumericUpDown3.Size = New Size(83, 23)
         NumericUpDown3.TabIndex = 2
-        NumericUpDown3.Value = New Decimal(New Integer() {274228800, 0, 0, 0})
+        NumericUpDown3.Value = New Decimal(New Integer() {274228796, 0, 0, 0})
         ' 
         ' ClockTimer
         ' 
