@@ -121,11 +121,11 @@
         Return {baseresistance, offset, steepness, minimumfetresistance}
     End Function
 
-    Public Overrides Sub setCurveProperties(a As Single, b As Single, c As Single, d As Single)
-        baseresistance = a
-        offset = b
-        steepness = c
-        minimumfetresistance = d
+    Public Overrides Sub setCurveProperties(br As Single, o As Single, s As Single, mfr As Single)
+        baseresistance = br
+        offset = o
+        steepness = s
+        minimumfetresistance = mfr
         recalculate()
         updatedCenterFrequency()
     End Sub

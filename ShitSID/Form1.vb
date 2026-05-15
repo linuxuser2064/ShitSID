@@ -53,9 +53,7 @@ Public Class Form1
         Next
         sid.Filter.Mode6581 = CheckBox6.Checked
         sid.InternalAudioFilter = AudioOutputSettings.CheckBox1.Checked
-        'sid.Filter.CutoffBias = NumericUpDown3.Value
-        'sid.Filter.CutoffMultiplier = NumericUpDown2.Value
-        'sid.Filter.ResonanceDivider = NumericUpDown4.Value
+        sid.Filter.setCurveProperties(NumericUpDown2.Value, NumericUpDown3.Value, NumericUpDown4.Value, 16125.1553F)
         sid.BypassFilter = CheckBox7.Checked
         sid.VolumeSampleMode = RadioButton1.Checked
         If RadioButton3.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Dark
@@ -158,27 +156,19 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         End If
     End Sub
 
-    Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown3.ValueChanged
+    Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged, NumericUpDown3.ValueChanged, NumericUpDown4.ValueChanged
         If sid IsNot Nothing Then
-            'sid.Filter.CutoffBias = NumericUpDown3.Value
-        End If
-
-    End Sub
-
-    Private Sub NumericUpDown4_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown4.ValueChanged
-        If sid IsNot Nothing Then
-            'sid.Filter.ResonanceDivider = NumericUpDown4.Value
+            sid.Filter.setCurveProperties(NumericUpDown2.Value, NumericUpDown3.Value, NumericUpDown4.Value, 16125.1553F)
         End If
     End Sub
-
     Private Sub CheckBox6_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox6.CheckedChanged
         If sid IsNot Nothing Then
             If CheckBox6.Checked Then
                 sid.Filter.Mode6581 = True
-                sid.Filter.Reset()
+                sid.Filter.reset()
             Else
                 sid.Filter.Mode6581 = False
-                sid.Filter.Reset()
+                sid.Filter.reset()
             End If
         End If
         RadioButton3.Enabled = CheckBox6.Checked
@@ -220,11 +210,6 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         End If
     End Sub
 
-    Private Sub NumericUpDown2_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged
-        If sid IsNot Nothing Then
-            'sid.Filter.CutoffMultiplier = NumericUpDown2.Value
-        End If
-    End Sub
     Dim stamp As New TimeSpan
     Private Sub Button6_Click(sender As Object, e As EventArgs) Handles Button6.Click
         If Not OpenFileDialog1.ShowDialog = DialogResult.OK Then
@@ -286,14 +271,20 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     Private Sub RadioButton5_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton5.CheckedChanged, RadioButton4.CheckedChanged, RadioButton3.CheckedChanged
         If sid IsNot Nothing Then
             If RadioButton3.Checked Then
-                sid.FilterCurve = ShitSID.FilterCurveType.Dark
+                sid.Filter.setCurveAndDistortionDefaults()
+                sid.Filter.setCurveProperties(1399768.3253307983, 553018906.8926692, 1.0051493199361266, 11961.908870403166)
             End If
             If RadioButton4.Checked Then
-                sid.FilterCurve = ShitSID.FilterCurveType.Average
+                sid.Filter.setCurveAndDistortionDefaults()
             End If
             If RadioButton5.Checked Then
-                sid.FilterCurve = ShitSID.FilterCurveType.Bright
+                sid.Filter.setCurveAndDistortionDefaults()
+                sid.Filter.setCurveProperties(1164920.4999651583, 12915042.165290257, 1.0058853753357735, 12914.5661141159)
             End If
+            Dim got = provider.sid.Filter.getCurveProperties
+            NumericUpDown2.Value = got(0)
+            NumericUpDown3.Value = got(1)
+            NumericUpDown4.Value = got(2)
         End If
     End Sub
 
@@ -323,6 +314,11 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub Button7_Click(sender As Object, e As EventArgs) Handles Button7.Click
         If provider Is Nothing Then Exit Sub
-        provider.sid.Filter.Reset()
+        provider.sid.Filter.reset()
+        provider.sid.Filter.setCurveAndDistortionDefaults()
+        Dim got = provider.sid.Filter.getCurveProperties
+        NumericUpDown2.Value = got(0)
+        NumericUpDown3.Value = got(1)
+        NumericUpDown4.Value = got(2)
     End Sub
 End Class

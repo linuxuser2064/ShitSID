@@ -3,6 +3,7 @@ Imports System.Threading
 Imports Highbyte.DotNet6502
 Imports Highbyte.DotNet6502.Instructions
 Imports Highbyte.DotNet6502.Systems.Commodore64.TimerAndPeripheral
+Imports Highbyte.DotNet6502.Utils
 Imports Microsoft.Extensions.Logging
 Imports NAudio.Wave
 
@@ -136,10 +137,11 @@ Public Class SidAudioProvider
             'Thread.Sleep(1)
         End While
         'cpu.ExecuteUntilBRK(mem)
-        mem.MapROM(0, {&H4C, 0, 0})
-        mem(&H0) = &H4C
-        mem(&H1) = &H0
-        mem(&H2) = &H0
+        Const driverAddress As UShort = &HFFF0
+        mem.MapROM(driverAddress, {&H4C, driverAddress.Lowbyte, driverAddress.Highbyte})
+        mem(driverAddress) = &H4C
+        mem(driverAddress + 1) = driverAddress.Lowbyte
+        mem(driverAddress + 2) = driverAddress.Highbyte
         If sidfile.PlayAddress = 0 Then ' RSID mode activate
             playAddr = BitConverter.ToUInt16({mem(788), mem(789)}) ' kernal IRQ vector (rarely used)
             If playAddr = 0 Then

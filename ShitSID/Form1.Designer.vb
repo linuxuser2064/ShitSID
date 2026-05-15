@@ -296,21 +296,21 @@ Partial Class Form1
         Label6.FlatStyle = FlatStyle.System
         Label6.Location = New Point(9, 20)
         Label6.Name = "Label6"
-        Label6.Size = New Size(95, 15)
+        Label6.Size = New Size(86, 15)
         Label6.TabIndex = 9
-        Label6.Text = "Cutoff multiplier"
+        Label6.Text = "Base resistance"
         ' 
         ' NumericUpDown2
         ' 
-        NumericUpDown2.DecimalPlaces = 3
-        NumericUpDown2.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
+        NumericUpDown2.DecimalPlaces = 1
+        NumericUpDown2.Increment = New Decimal(New Integer() {20000, 0, 0, 0})
         NumericUpDown2.Location = New Point(136, 18)
         NumericUpDown2.Margin = New Padding(3, 2, 3, 2)
-        NumericUpDown2.Maximum = New Decimal(New Integer() {32767, 0, 0, 0})
+        NumericUpDown2.Maximum = New Decimal(New Integer() {-967987856, 183446, 0, 0})
         NumericUpDown2.Name = "NumericUpDown2"
-        NumericUpDown2.Size = New Size(74, 23)
+        NumericUpDown2.Size = New Size(83, 23)
         NumericUpDown2.TabIndex = 8
-        NumericUpDown2.Value = New Decimal(New Integer() {1, 0, 0, 0})
+        NumericUpDown2.Value = New Decimal(New Integer() {11470365, 0, 0, 65536})
         ' 
         ' CheckBox7
         ' 
@@ -343,21 +343,21 @@ Partial Class Form1
         Label5.FlatStyle = FlatStyle.System
         Label5.Location = New Point(9, 63)
         Label5.Name = "Label5"
-        Label5.Size = New Size(103, 15)
+        Label5.Size = New Size(59, 15)
         Label5.TabIndex = 5
-        Label5.Text = "Resonance divider"
+        Label5.Text = "Steepness"
         ' 
         ' NumericUpDown4
         ' 
-        NumericUpDown4.DecimalPlaces = 2
-        NumericUpDown4.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
+        NumericUpDown4.DecimalPlaces = 8
+        NumericUpDown4.Increment = New Decimal(New Integer() {2, 0, 0, 327680})
         NumericUpDown4.Location = New Point(136, 62)
         NumericUpDown4.Margin = New Padding(3, 2, 3, 2)
-        NumericUpDown4.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
+        NumericUpDown4.Maximum = New Decimal(New Integer() {2, 0, 0, 0})
         NumericUpDown4.Name = "NumericUpDown4"
-        NumericUpDown4.Size = New Size(74, 23)
+        NumericUpDown4.Size = New Size(83, 23)
         NumericUpDown4.TabIndex = 4
-        NumericUpDown4.Value = New Decimal(New Integer() {2, 0, 0, 0})
+        NumericUpDown4.Value = New Decimal(New Integer() {100666344, 0, 0, 524288})
         ' 
         ' Label4
         ' 
@@ -365,20 +365,20 @@ Partial Class Form1
         Label4.FlatStyle = FlatStyle.System
         Label4.Location = New Point(9, 42)
         Label4.Name = "Label4"
-        Label4.Size = New Size(65, 15)
+        Label4.Size = New Size(39, 15)
         Label4.TabIndex = 3
-        Label4.Text = "Cutoff bias"
+        Label4.Text = "Offset"
         ' 
         ' NumericUpDown3
         ' 
-        NumericUpDown3.Increment = New Decimal(New Integer() {50, 0, 0, 0})
+        NumericUpDown3.Increment = New Decimal(New Integer() {1000000, 0, 0, 0})
         NumericUpDown3.Location = New Point(136, 40)
         NumericUpDown3.Margin = New Padding(3, 2, 3, 2)
-        NumericUpDown3.Maximum = New Decimal(New Integer() {20154, 0, 0, 0})
-        NumericUpDown3.Minimum = New Decimal(New Integer() {20154, 0, 0, Integer.MinValue})
+        NumericUpDown3.Maximum = New Decimal(New Integer() {758371851, 6, 0, 0})
         NumericUpDown3.Name = "NumericUpDown3"
-        NumericUpDown3.Size = New Size(74, 23)
+        NumericUpDown3.Size = New Size(83, 23)
         NumericUpDown3.TabIndex = 2
+        NumericUpDown3.Value = New Decimal(New Integer() {274228800, 0, 0, 0})
         ' 
         ' ClockTimer
         ' 
