@@ -72,7 +72,10 @@ Public Class PSGView
         g.DrawString("Pitch:", CommonFont, Brushes.White, cX(2), cY(34 + yOffset))
         ' ---
         Const magic = 2.30102999566
-        Dim filledD As Double = 160.0 * (Math.Log10(SID.Voices(idx).Frequency / 20) / magic)
+        Dim freqVal = (CUInt(SID.Voices(idx).FreqHi) << 8) Or CUInt(SID.Voices(idx).FreqLo)
+        Dim actualFrequency = freqVal * 0.0587253570557
+
+        Dim filledD As Double = 160.0 * (Math.Log10(actualFrequency / 20) / magic)
         If filledD = Double.NegativeInfinity Then filledD = 0
         If filledD < 0 Then filledD = 0
         g.FillRectangle(ScrollbarForegroundBrush, 35, 34 + yOffset, CInt(filledD), 7)
@@ -81,7 +84,7 @@ Public Class PSGView
 
         g.DrawRectangle(ScrollbarTrackOuterPen, 35 + CInt(filledD) - 1, 33 + yOffset, 2, 9)
         g.DrawLine(ScrollbarTrackInnerPen, 35 + CInt(filledD), 34 + yOffset, 35 + CInt(filledD), 41 + yOffset)
-        g.DrawString(Math.Round(SID.Voices(idx).Frequency, 1), CommonFont, Brushes.White, cX(200), cY(34 + yOffset))
+        g.DrawString(Math.Round(actualFrequency, 1), CommonFont, Brushes.White, cX(200), cY(34 + yOffset))
         g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(34 + yOffset))
 
         g.DrawString("ADSR:", CommonFont, Brushes.White, cX(2), cY(44 + yOffset))
@@ -114,30 +117,34 @@ CommonFont, Brushes.White, cX(120), cY(44 + yOffset))
         g.DrawString($"Filter:", CommonFont, Brushes.White, cX(2), cY(164))
 
         g.DrawString("Mode:", CommonFont, Brushes.White, cX(2), cY(176))
-        If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.LowPass) Then g.FillRectangle(EnabledOptionBrush, 43, 175, 16, 9)
-        If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.BandPass) Then g.FillRectangle(EnabledOptionBrush, 60, 175, 16, 9)
-        If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.HighPass) Then g.FillRectangle(EnabledOptionBrush, 77, 175, 16, 9)
+        'If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.LowPass) Then g.FillRectangle(EnabledOptionBrush, 43, 175, 16, 9)
+        'If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.BandPass) Then g.FillRectangle(EnabledOptionBrush, 60, 175, 16, 9)
+        'If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.HighPass) Then g.FillRectangle(EnabledOptionBrush, 77, 175, 16, 9)
+        If SID.Filter.lp Then g.FillRectangle(EnabledOptionBrush, 43, 175, 16, 9)
+        If SID.Filter.bp Then g.FillRectangle(EnabledOptionBrush, 60, 175, 16, 9)
+        If SID.Filter.hp Then g.FillRectangle(EnabledOptionBrush, 77, 175, 16, 9)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.filt_lp, 44, 176)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.filt_bp, 61, 176)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.filt_hp, 78, 176)
 
         g.DrawString("Resonance:", CommonFont, Brushes.White, cX(97), cY(176))
-        Dim filled = CInt(SID.Filter.resonance * 48)
+        Dim filled = CInt((SID.Filter.res / 15) * 48)
         Dim remainder = 48 - filled
         g.FillRectangle(ProgressBarForegroundBrush, 155, 176, filled, 7)
         g.FillRectangle(BarBackgroundBrush, 202 - remainder, 176, remainder, 7)
-        g.DrawString(CInt(SID.Filter.resonance * 15), CommonFont, Brushes.White, cX(208), cY(176))
+        g.DrawString(CInt(SID.Filter.res), CommonFont, Brushes.White, cX(208), cY(176))
 
         g.DrawString("Cutoff:", CommonFont, Brushes.White, cX(2), cY(186))
-        filled = CInt(SID.Filter.cutoffVal / 12.79375)
+        filled = CInt(SID.Filter.fc / 12.79375)
         g.FillRectangle(ScrollbarForegroundBrush, 43, 186, filled, 7)
         remainder = 160 - filled
         g.FillRectangle(BarBackgroundBrush, 202 - remainder, 186, remainder, 7)
 
         g.DrawRectangle(ScrollbarTrackOuterPen, 43 + filled - 1, 185, 2, 9)
         g.DrawLine(ScrollbarTrackInnerPen, 43 + filled, 186, 43 + filled, 186 + 7)
-        g.DrawString(Math.Floor(SID.Filter.InterpolatedCutoff), CommonFont, Brushes.White, cX(208), cY(186))
-        g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(186))
+        'g.DrawString(Math.Floor(SID.Filter.InterpolatedCutoff), CommonFont, Brushes.White, cX(208), cY(186))
+        'g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(186))
+        g.DrawString(SID.Filter.fc, CommonFont, Brushes.White, cX(208), cY(186))
 
         g.FillRectangle(SectionLabelBrush, 0, 196, 38, 11)
         g.DrawString($"Global:", CommonFont, Brushes.White, cX(2), cY(198))

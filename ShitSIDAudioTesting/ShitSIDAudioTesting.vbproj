@@ -134,6 +134,8 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Filter6581\Filter.vb" />
+    <Compile Include="Filter6581\Filter6581.vb" />
     <Compile Include="FilterCurves.vb" />
     <Compile Include="FilterDistortion.Designer.vb">
       <DependentUpon>FilterDistortion.vb</DependentUpon>
@@ -152,6 +154,7 @@
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
       <DependentUpon>Application.myapp</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <Compile Include="My Project\Resources.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -163,6 +166,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Compile Include="SIDFilter.vb" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="FilterDistortion.resx">

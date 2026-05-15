@@ -113,7 +113,7 @@ Public Class SidAudioProvider
                                   End Sub)
         End If
         mem.MapReader(54299, Function(addr As UShort)
-                                 Return sid.Voices(2).GenerateNoEnvelope(sid.CurrentTime) * 127
+                                 Return sid.Voices(2).GenerateNoEnvelope() * 127
                              End Function)
         mem.MapReader(54300, Function(addr As UShort)
                                  Return sid.Voices(2).Envelope.Output

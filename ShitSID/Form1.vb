@@ -5,12 +5,11 @@ Imports NAudio.CoreAudioApi
 Imports NAudio.MediaFoundation
 Imports FFMediaToolkit.Encoding
 Public Class Form1
-    Public SAMPLERATE As Integer = 88200
+    Public SAMPLERATE As Integer = 96000
     Public sid As ShitSID
     Public sidfile As SidFile
     Public fakeClockCount = 0
     Public cpu As New CPU
-    Dim delayMS = 20 ' this does not work
     Public mem As New Memory(65536)
     Private waveOut As WasapiOut = Nothing
     Private WithEvents provider As SidAudioProvider = Nothing
@@ -34,8 +33,8 @@ Public Class Form1
         sid = New ShitSID(SAMPLERATE)
         'cpu.SP = 1
         mem(1) = &H37
-        SidFile = SidFile.Load(OpenFileDialog1.FileName)
-        If SidFile.FlagBits(2) = False AndAlso SidFile.FlagBits(3) = True Then
+        sidfile = SidFile.Load(OpenFileDialog1.FileName)
+        If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
             mem(&H2A6) = 1 ' PAL
         End If
 
@@ -43,7 +42,7 @@ Public Class Form1
         If NumericUpDown1.Value > 0 Then
             cpu.A = NumericUpDown1.Value - 1
         Else
-            cpu.A = SidFile.StartSong - 1
+            cpu.A = sidfile.StartSong - 1
         End If
         sid.Voices(0).MuteVoice = CheckBox2.Checked
         sid.Voices(1).MuteVoice = CheckBox3.Checked
@@ -54,17 +53,17 @@ Public Class Form1
         Next
         sid.Filter.Mode6581 = CheckBox6.Checked
         sid.InternalAudioFilter = AudioOutputSettings.CheckBox1.Checked
-        sid.Filter.CutoffBias = NumericUpDown3.Value
-        sid.Filter.CutoffMultiplier = NumericUpDown2.Value
-        sid.Filter.ResonanceDivider = NumericUpDown4.Value
+        'sid.Filter.CutoffBias = NumericUpDown3.Value
+        'sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+        'sid.Filter.ResonanceDivider = NumericUpDown4.Value
         sid.BypassFilter = CheckBox7.Checked
         sid.VolumeSampleMode = RadioButton1.Checked
         If RadioButton3.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Dark
         If RadioButton4.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Average
         If RadioButton5.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Bright
         CheckBox6_CheckedChanged(Nothing, Nothing)
-        cpu.PC = SidFile.InitAddress
-        Console.WriteLine($"Init address: {SidFile.InitAddress.ToString("X4")}")
+        cpu.PC = sidfile.InitAddress
+        Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
         If CheckBox5.Checked Then
             NumericUpDown6.Value = 60
         End If
@@ -161,14 +160,14 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown3.ValueChanged
         If sid IsNot Nothing Then
-            sid.Filter.CutoffBias = NumericUpDown3.Value
+            'sid.Filter.CutoffBias = NumericUpDown3.Value
         End If
 
     End Sub
 
     Private Sub NumericUpDown4_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown4.ValueChanged
         If sid IsNot Nothing Then
-            sid.Filter.ResonanceDivider = NumericUpDown4.Value
+            'sid.Filter.ResonanceDivider = NumericUpDown4.Value
         End If
     End Sub
 
@@ -223,7 +222,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub NumericUpDown2_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged
         If sid IsNot Nothing Then
-            sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+            'sid.Filter.CutoffMultiplier = NumericUpDown2.Value
         End If
     End Sub
     Dim stamp As New TimeSpan
@@ -320,5 +319,10 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     Private Sub TrackBar1_Scroll(sender As Object, e As EventArgs) Handles TrackBar1.Scroll
         If provider Is Nothing Then Exit Sub
         provider.Volume = TrackBar1.Value / 100
+    End Sub
+
+    Private Sub Button7_Click(sender As Object, e As EventArgs) Handles Button7.Click
+        If provider Is Nothing Then Exit Sub
+        provider.sid.Filter.Reset()
     End Sub
 End Class

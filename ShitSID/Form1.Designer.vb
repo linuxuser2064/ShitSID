@@ -38,6 +38,7 @@ Partial Class Form1
         CheckBox4 = New CheckBox()
         CheckBox5 = New CheckBox()
         GroupBox1 = New GroupBox()
+        Button7 = New Button()
         RadioButton5 = New RadioButton()
         RadioButton4 = New RadioButton()
         RadioButton3 = New RadioButton()
@@ -219,6 +220,7 @@ Partial Class Form1
         ' 
         ' GroupBox1
         ' 
+        GroupBox1.Controls.Add(Button7)
         GroupBox1.Controls.Add(RadioButton5)
         GroupBox1.Controls.Add(RadioButton4)
         GroupBox1.Controls.Add(RadioButton3)
@@ -239,6 +241,16 @@ Partial Class Form1
         GroupBox1.TabIndex = 12
         GroupBox1.TabStop = False
         GroupBox1.Text = "Filter controls"
+        ' 
+        ' Button7
+        ' 
+        Button7.FlatStyle = FlatStyle.System
+        Button7.Location = New Point(156, 148)
+        Button7.Name = "Button7"
+        Button7.Size = New Size(75, 23)
+        Button7.TabIndex = 13
+        Button7.Text = "Reset filter"
+        Button7.UseVisualStyleBackColor = True
         ' 
         ' RadioButton5
         ' 
@@ -314,6 +326,8 @@ Partial Class Form1
         ' CheckBox6
         ' 
         CheckBox6.AutoSize = True
+        CheckBox6.Checked = True
+        CheckBox6.CheckState = CheckState.Checked
         CheckBox6.FlatStyle = FlatStyle.System
         CheckBox6.Location = New Point(5, 90)
         CheckBox6.Margin = New Padding(3, 2, 3, 2)
@@ -688,5 +702,6 @@ Partial Class Form1
     Friend WithEvents TrackBar1 As TrackBar
     Friend WithEvents Label9 As Label
     Friend WithEvents CheckBox10 As CheckBox
+    Friend WithEvents Button7 As Button
 
 End Class
