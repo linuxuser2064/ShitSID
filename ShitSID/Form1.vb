@@ -258,7 +258,6 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             Console.WriteLine($"Video time: {stamp.ToString}")
             BitmapToImageData.BMPtoBitmapData.AddBitmapFrame(EncodeVid, data)
             stamp = stamp.Add(TimeSpan.FromMilliseconds(1000 / provider.TickRate)) ' hardcoded ahh
-            'Application.DoEvents()
         Catch ex As Exception
             Console.WriteLine(ex.ToString)
         Finally
@@ -276,7 +275,7 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             End If
             If RadioButton4.Checked Then
                 sid.Filter.setCurveAndDistortionDefaults()
-                sid.Filter.setCurveProperties(1147036.4394268463, 274228796.97550374, 1.0066634233403395, 16125.154840564108)
+                sid.Filter.setCurveProperties(1522171.9229830841, 21729926.667291082, 1.0049948025374751, 14299.149638099827)
             End If
             If RadioButton5.Checked Then
                 sid.Filter.setCurveAndDistortionDefaults()
