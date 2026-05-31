@@ -41,9 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="C64Util">
-      <HintPath>B:\source\repos\ShitSID\C64Util\bin\Debug\net9.0-windows\C64Util.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\C64Util\C64Util.csproj" />
   </ItemGroup>
 
   <ItemGroup>
