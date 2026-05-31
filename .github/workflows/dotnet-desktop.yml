@@ -2,7 +2,7 @@ name: Build ShitSID
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "psg_view" ]
 
 jobs:
   build:
