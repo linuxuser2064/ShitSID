@@ -4,6 +4,7 @@ Imports System.IO
 Imports NAudio.CoreAudioApi
 Imports NAudio.MediaFoundation
 Imports FFMediaToolkit.Encoding
+Imports FFmpeg.AutoGen
 Public Class Form1
     Public SAMPLERATE As Integer = 88200
     Public sid As ShitSID
@@ -34,8 +35,8 @@ Public Class Form1
         sid = New ShitSID(SAMPLERATE)
         'cpu.SP = 1
         mem(1) = &H37
-        SidFile = SidFile.Load(OpenFileDialog1.FileName)
-        If SidFile.FlagBits(2) = False AndAlso SidFile.FlagBits(3) = True Then
+        sidfile = SidFile.Load(OpenFileDialog1.FileName)
+        If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
             mem(&H2A6) = 1 ' PAL
         End If
 
@@ -43,7 +44,7 @@ Public Class Form1
         If NumericUpDown1.Value > 0 Then
             cpu.A = NumericUpDown1.Value - 1
         Else
-            cpu.A = SidFile.StartSong - 1
+            cpu.A = sidfile.StartSong - 1
         End If
         sid.Voices(0).MuteVoice = CheckBox2.Checked
         sid.Voices(1).MuteVoice = CheckBox3.Checked
@@ -63,8 +64,8 @@ Public Class Form1
         If RadioButton4.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Average
         If RadioButton5.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Bright
         CheckBox6_CheckedChanged(Nothing, Nothing)
-        cpu.PC = SidFile.InitAddress
-        Console.WriteLine($"Init address: {SidFile.InitAddress.ToString("X4")}")
+        cpu.PC = sidfile.InitAddress
+        Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
         If CheckBox5.Checked Then
             NumericUpDown6.Value = 60
         End If
@@ -73,6 +74,8 @@ Public Class Form1
         provider = New SidAudioProvider(sid, cpu, mem, PSGViewer, SAMPLERATE)
         provider.Volume = TrackBar1.Value / 100
         AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
+        provider.EnablePSGView = CheckBox11.Checked
+        provider.PSGViewDivider = NumericUpDown7.Value
         provider.TickRate = NumericUpDown6.Value
         provider.UseNTSC = CheckBox5.Checked
         PSGViewForm.Show()
@@ -241,8 +244,10 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         MediaFoundationApi.Startup()
         Console.WriteLine("Loading SID...")
         LoadSID()
-        RemoveHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
-        AddHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
+        If CheckBox11.Checked Then
+            RemoveHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
+            AddHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
+        End If
         provider.sidfile = sidfile
         provider.InitSIDFile()
         Console.WriteLine("Creating MediaType...")
@@ -250,21 +255,27 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         Console.WriteLine("Creating MF encoder...")
         Dim wavProv As New MediaFoundationEncoder(type)
         wavProv.DefaultReadBufferSize = SAMPLERATE \ NumericUpDown6.Value
-        Console.WriteLine("Creating video container...")
-        Dim opts = New VideoEncoderSettings(512, 512, NumericUpDown6.Value, VideoCodec.H264) With {.Bitrate = 3200 * 1000, .EncoderPreset = EncoderPreset.Faster}
-        opts.CodecOptions("profile") = "high444"
-        opts.CodecOptions("pix_fmt") = "yuv444p"
-        opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444
-        EncodeVid = MediaBuilder.CreateContainer(Path.Combine(outputFolder, $"{outputFileNoExt}.mp4"), ContainerFormat.MP4).
+        If CheckBox11.Checked Then
+            Console.WriteLine("Creating video container...")
+            Dim opts = New VideoEncoderSettings(512, 512, NumericUpDown6.Value, VideoCodec.H264) With
+                {.Bitrate = 3200 * 1000,
+                .EncoderPreset = EncoderPreset.Faster,
+                .FramerateRational = New AVRational With {.num = NumericUpDown6.Value, .den = NumericUpDown7.Value}}
+            opts.CodecOptions("profile") = "high444"
+            opts.CodecOptions("pix_fmt") = "yuv444p"
+            opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444
+            EncodeVid = MediaBuilder.CreateContainer(Path.Combine(outputFolder, $"{outputFileNoExt}.mp4"), ContainerFormat.MP4).
             WithVideo(opts).Create
+        End If
         Console.WriteLine("Encoding...")
         provider.runCPU = True
         wavProv.Encode(Path.Combine(outputFolder, $"{outputFileNoExt}.wav"), provider.Take(TimeSpan.FromSeconds(NumericUpDown5.Value)).ToWaveProvider)
-        EncodeVid.Dispose()
-        Console.WriteLine("Done")
+        If CheckBox11.Checked Then
+            Console.WriteLine("Done")
+            RemoveHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
+            AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
+        End If
         Me.Enabled = True
-        RemoveHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
-        AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
 
     End Sub
     Private EncodeVid As MediaOutput
@@ -320,5 +331,19 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     Private Sub TrackBar1_Scroll(sender As Object, e As EventArgs) Handles TrackBar1.Scroll
         If provider Is Nothing Then Exit Sub
         provider.Volume = TrackBar1.Value / 100
+    End Sub
+
+    Private Sub CheckBox10_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox10.CheckedChanged
+
+    End Sub
+
+    Private Sub CheckBox11_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox11.CheckedChanged
+        If provider Is Nothing Then Exit Sub
+        provider.EnablePSGView = CheckBox11.Checked
+    End Sub
+
+    Private Sub NumericUpDown7_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown7.ValueChanged
+        If provider Is Nothing Then Exit Sub
+        provider.PSGViewDivider = NumericUpDown7.Value
     End Sub
 End Class

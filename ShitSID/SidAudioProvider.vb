@@ -29,6 +29,10 @@ Public Class SidAudioProvider
     Dim volumebuf As New List(Of Byte)
     Dim volphase As Integer = 0
 
+    Public EnablePSGView As Boolean = True
+    Public PSGViewDivider As Integer = 8
+    Dim psgPhase As Integer = 0
+
     Public EnablePCMCapture As Boolean = False
     Dim lastVol As Byte = 0
     Dim CycleCounter As UInt128 = 0
@@ -175,7 +179,11 @@ Public Class SidAudioProvider
                 cpu.CPUInterrupts.SetIRQSourceActive("raster", True)
                 cpu.PC = playAddr
                 cpuClockPhase -= (sampleRate \ TickRate)
-                RaiseEvent PSGViewFrame(psgView.Frame(volumebuf.ToArray, 2))
+                If EnablePSGView Then
+                    If psgPhase = 0 Then RaiseEvent PSGViewFrame(psgView.Frame(volumebuf.ToArray, 2))
+                    psgPhase += 1
+                    psgPhase = psgPhase Mod PSGViewDivider
+                End If
             End If
 
             ' --- advance SID phase while handling CPU ---

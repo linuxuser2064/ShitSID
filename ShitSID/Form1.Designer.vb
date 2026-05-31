@@ -68,6 +68,9 @@ Partial Class Form1
         SaveFileDialog1 = New SaveFileDialog()
         CheckBox9 = New CheckBox()
         GroupBox5 = New GroupBox()
+        NumericUpDown7 = New NumericUpDown()
+        Label10 = New Label()
+        CheckBox11 = New CheckBox()
         TrackBar1 = New TrackBar()
         Label9 = New Label()
         CheckBox10 = New CheckBox()
@@ -82,6 +85,7 @@ Partial Class Form1
         GroupBox4.SuspendLayout()
         CType(NumericUpDown6, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox5.SuspendLayout()
+        CType(NumericUpDown7, ComponentModel.ISupportInitialize).BeginInit()
         CType(TrackBar1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -389,24 +393,24 @@ Partial Class Form1
         ' RadioButton2
         ' 
         RadioButton2.AutoSize = True
+        RadioButton2.Checked = True
         RadioButton2.FlatStyle = FlatStyle.System
         RadioButton2.Location = New Point(6, 39)
         RadioButton2.Name = "RadioButton2"
         RadioButton2.Size = New Size(105, 20)
         RadioButton2.TabIndex = 1
+        RadioButton2.TabStop = True
         RadioButton2.Text = "Volume mode"
         RadioButton2.UseVisualStyleBackColor = True
         ' 
         ' RadioButton1
         ' 
         RadioButton1.AutoSize = True
-        RadioButton1.Checked = True
         RadioButton1.FlatStyle = FlatStyle.System
         RadioButton1.Location = New Point(6, 17)
         RadioButton1.Name = "RadioButton1"
         RadioButton1.Size = New Size(104, 20)
         RadioButton1.TabIndex = 0
-        RadioButton1.TabStop = True
         RadioButton1.Text = "Sample mode"
         RadioButton1.UseVisualStyleBackColor = True
         ' 
@@ -414,7 +418,7 @@ Partial Class Form1
         ' 
         Button4.Enabled = False
         Button4.FlatStyle = FlatStyle.System
-        Button4.Location = New Point(370, 248)
+        Button4.Location = New Point(370, 261)
         Button4.Name = "Button4"
         Button4.Size = New Size(51, 23)
         Button4.TabIndex = 14
@@ -424,7 +428,7 @@ Partial Class Form1
         ' Button5
         ' 
         Button5.FlatStyle = FlatStyle.System
-        Button5.Location = New Point(424, 248)
+        Button5.Location = New Point(424, 261)
         Button5.Name = "Button5"
         Button5.Size = New Size(91, 23)
         Button5.TabIndex = 17
@@ -538,7 +542,7 @@ Partial Class Form1
         ' 
         CheckBox9.AutoSize = True
         CheckBox9.FlatStyle = FlatStyle.System
-        CheckBox9.Location = New Point(6, 18)
+        CheckBox9.Location = New Point(6, 30)
         CheckBox9.Name = "CheckBox9"
         CheckBox9.Size = New Size(106, 20)
         CheckBox9.TabIndex = 13
@@ -547,19 +551,53 @@ Partial Class Form1
         ' 
         ' GroupBox5
         ' 
+        GroupBox5.Controls.Add(NumericUpDown7)
+        GroupBox5.Controls.Add(Label10)
+        GroupBox5.Controls.Add(CheckBox11)
         GroupBox5.Controls.Add(CheckBox9)
         GroupBox5.FlatStyle = FlatStyle.System
         GroupBox5.Location = New Point(6, 212)
         GroupBox5.Name = "GroupBox5"
-        GroupBox5.Size = New Size(144, 46)
+        GroupBox5.Size = New Size(144, 72)
         GroupBox5.TabIndex = 23
         GroupBox5.TabStop = False
         GroupBox5.Text = "PSG View"
         ' 
+        ' NumericUpDown7
+        ' 
+        NumericUpDown7.Location = New Point(59, 48)
+        NumericUpDown7.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
+        NumericUpDown7.Name = "NumericUpDown7"
+        NumericUpDown7.Size = New Size(79, 23)
+        NumericUpDown7.TabIndex = 16
+        NumericUpDown7.Value = New Decimal(New Integer() {1, 0, 0, 0})
+        ' 
+        ' Label10
+        ' 
+        Label10.AutoSize = True
+        Label10.Location = New Point(6, 51)
+        Label10.Name = "Label10"
+        Label10.Size = New Size(47, 15)
+        Label10.TabIndex = 15
+        Label10.Text = "Divider:"
+        ' 
+        ' CheckBox11
+        ' 
+        CheckBox11.AutoSize = True
+        CheckBox11.Checked = True
+        CheckBox11.CheckState = CheckState.Checked
+        CheckBox11.FlatStyle = FlatStyle.System
+        CheckBox11.Location = New Point(6, 13)
+        CheckBox11.Name = "CheckBox11"
+        CheckBox11.Size = New Size(67, 20)
+        CheckBox11.TabIndex = 14
+        CheckBox11.Text = "Enable"
+        CheckBox11.UseVisualStyleBackColor = True
+        ' 
         ' TrackBar1
         ' 
         TrackBar1.LargeChange = 20
-        TrackBar1.Location = New Point(260, 244)
+        TrackBar1.Location = New Point(260, 257)
         TrackBar1.Maximum = 100
         TrackBar1.Name = "TrackBar1"
         TrackBar1.Size = New Size(104, 45)
@@ -572,7 +610,7 @@ Partial Class Form1
         ' 
         Label9.AutoSize = True
         Label9.FlatStyle = FlatStyle.System
-        Label9.Location = New Point(166, 250)
+        Label9.Location = New Point(166, 263)
         Label9.Name = "Label9"
         Label9.Size = New Size(91, 15)
         Label9.TabIndex = 25
@@ -582,7 +620,7 @@ Partial Class Form1
         ' 
         CheckBox10.AutoSize = True
         CheckBox10.FlatStyle = FlatStyle.System
-        CheckBox10.Location = New Point(6, 277)
+        CheckBox10.Location = New Point(6, 287)
         CheckBox10.Name = "CheckBox10"
         CheckBox10.Size = New Size(427, 20)
         CheckBox10.TabIndex = 26
@@ -593,7 +631,7 @@ Partial Class Form1
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(520, 301)
+        ClientSize = New Size(520, 309)
         Controls.Add(CheckBox10)
         Controls.Add(Label9)
         Controls.Add(TrackBar1)
@@ -636,6 +674,7 @@ Partial Class Form1
         CType(NumericUpDown6, ComponentModel.ISupportInitialize).EndInit()
         GroupBox5.ResumeLayout(False)
         GroupBox5.PerformLayout()
+        CType(NumericUpDown7, ComponentModel.ISupportInitialize).EndInit()
         CType(TrackBar1, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
@@ -688,5 +727,8 @@ Partial Class Form1
     Friend WithEvents TrackBar1 As TrackBar
     Friend WithEvents Label9 As Label
     Friend WithEvents CheckBox10 As CheckBox
+    Friend WithEvents Label10 As Label
+    Friend WithEvents CheckBox11 As CheckBox
+    Friend WithEvents NumericUpDown7 As NumericUpDown
 
 End Class
