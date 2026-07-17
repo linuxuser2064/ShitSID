@@ -1,208 +1,115 @@
-﻿'Public Class SIDFilter
-'    <Flags>
-'    Public Enum EFilterType
-'        None = 0
-'        LowPass = 1
-'        BandPass = 2
-'        HighPass = 4
-'    End Enum
-'    Public Mode6581 As Boolean = False
-'    Public parent As ShitSID
-'    Public filterType As EFilterType = EFilterType.LowPass
-'    Public resonance As Double = 0.0 ' 0.0 to 1.0
-'    Public cutoffVal As Integer = 0          ' 0..2047 (11-bit)
-'    Private sampleRate As Double = 44100.0
+﻿Public Class SIDFilter
+    <Flags>
+    Public Enum EFilterType
+        None = 0
+        LowPass = 1
+        BandPass = 2
+        HighPass = 4
+    End Enum
+    'Public Mode6581 As Boolean = False
+    Public parent As ShitSID
+    Public filterType As EFilterType = EFilterType.LowPass
+    Public resonance As Double = 0.0 ' 0.0 to 1.0
+    Public cutoffVal As Integer = 0          ' 0..2047 (11-bit)
+    Private sampleRate As Double = 44100.0
 
-'    ' State for your SVF path
-'    Private bandpass As Double = 0.0
-'    Private lowpass As Double = 0.0
-'    Private highpass As Double = 0.0
+    ' State for your SVF path
+    Private bandpass As Double = 0.0
+    Private lowpass As Double = 0.0
+    Private highpass As Double = 0.0
 
-'    Public CutoffMultiplier As Double = 1
-'    Public CutoffBias As Int32 = 0
-'    Public ResonanceDivider As Double = 1
-'    Public Sub New(pnt As ShitSID, Optional sampleRate As Double = 44100.0)
-'        parent = pnt
-'        Me.sampleRate = sampleRate
-'    End Sub
+    Public CutoffMultiplier As Double = 1
+    Public CutoffBias As Int32 = 0
+    Public ResonanceDivider As Double = 1
+    Public Sub New(pnt As ShitSID, Optional sampleRate As Double = 44100.0)
+        parent = pnt
+        Me.sampleRate = sampleRate
+    End Sub
 
-'    Public Overrides Function ToString() As String
-'        Return $"Type: {filterType}, Reso: {resonance}, Cutoff: {cutoffVal}"
-'    End Function
+    Public Overrides Function ToString() As String
+        Return $"Type: {filterType}, Reso: {resonance}, Cutoff: {cutoffVal}"
+    End Function
 
-'    Public Sub SetCutoff(rawCutoff As Integer)
-'        rawCutoff = Math.Max(0, Math.Min(2047, rawCutoff))
-'        cutoffVal = rawCutoff
-'    End Sub
+    Public Sub SetCutoff(rawCutoff As Integer)
+        rawCutoff = Math.Max(0, Math.Min(2047, rawCutoff))
+        cutoffVal = rawCutoff
+    End Sub
 
-'    Public Sub SetResonance(reso As Integer)
-'        reso = Math.Max(0, Math.Min(15, reso))
-'        resonance = reso / 15.0
-'    End Sub
+    Public Sub SetResonance(reso As Integer)
+        reso = Math.Max(0, Math.Min(15, reso))
+        resonance = reso / 15.0
+    End Sub
 
-'    Public Sub SetFilterType(ftype As EFilterType)
-'        filterType = ftype
-'    End Sub
+    Public Sub SetFilterType(ftype As EFilterType)
+        filterType = ftype
+    End Sub
 
-'    Public Function InterpolatedCutoff() As Double
-'        ' Keep your existing 6581/8580 curves for the SVF path
-'        If Mode6581 Then
-'            If parent.FilterCurve = ShitSID.FilterCurveType.Dark Then Return cutoffCurve6581Dark(cutoffVal).Item2
-'            If parent.FilterCurve = ShitSID.FilterCurveType.Average Then Return cutoffCurve6581(cutoffVal).Item2
-'            If parent.FilterCurve = ShitSID.FilterCurveType.Bright Then Return cutoffCurve6581Bright(cutoffVal).Item2
-'            Return cutoffCurve6581(cutoffVal).Item2
-'        Else
-'            Return cutoffCurve8580(cutoffVal).Item2
-'        End If
-'    End Function
-'    'Public Function ApplyFilter(input As Double) As Double
-'    '    ' === Basic filter math ===
-'    '    Dim freq = (InterpolatedCutoff() * CutoffMultiplier) + CutoffBias
-'    '    freq = Math.Clamp(freq, 1, sampleRate / 2 - 1)
+    Public Function InterpolatedCutoff() As Double
+        ' Keep your existing 6581/8580 curves for the SVF path
+        If parent.Mode6581 Then
+            If parent.FilterCurve = ShitSID.FilterCurveType.Dark Then Return cutoffCurve6581Dark(cutoffVal).Item2
+            If parent.FilterCurve = ShitSID.FilterCurveType.Average Then Return cutoffCurve6581(cutoffVal).Item2
+            If parent.FilterCurve = ShitSID.FilterCurveType.Bright Then Return cutoffCurve6581Bright(cutoffVal).Item2
+            Return cutoffCurve6581(cutoffVal).Item2
+        Else
+            Return cutoffCurve8580(cutoffVal).Item2
+        End If
+    End Function
+    Public Function ApplyFilter(input As Double) As Double
+        ' === Basic filter math ===
+        Dim freq = (InterpolatedCutoff() * CutoffMultiplier) + CutoffBias
+        freq = Math.Clamp(freq, 1, sampleRate / 2 - 1)
 
-'    '    Dim f As Double = 2 * Math.Sin(Math.PI * freq / sampleRate)
+        Dim f As Double = 2 * Math.Sin(Math.PI * freq / sampleRate)
+        f = Math.Max(f, 0.0001)
+        Dim q As Double = 1.0 - (resonance / ResonanceDivider)
+        q = Math.Clamp(q, 0.01, 0.99)
 
-'    '    ' 1. VCR MODULATION: The audio input directly modulates the cutoff.
-'    '    ' We do this BEFORE the feedback loop.
-'    '    If Mode6581 Then
-'    '        Dim vcrModAmount As Double = 0.01 ' Tweak this scalar
-'    '        f += (Math.Abs(input) * vcrModAmount)
-'    '    End If
+        ' === State variable filter ===
+        Dim hp As Double = input - lowpass - q * bandpass
+        Dim bp As Double = bandpass + f * hp
+        Dim lp As Double = lowpass + f * bp
 
-'    '    f = Math.Clamp(f, 0.0001, 0.99) ' Keep it stable
+        highpass = hp
+        bandpass = bp
+        lowpass = lp
 
-'    '    Dim q As Double = 1.0 - (resonance / ResonanceDivider)
-'    '    q = Math.Clamp(q, 0.01, 0.99)
+        ' === Combine outputs according to filter type ===
+        Dim output As Double = 0.0
+        If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
+        If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
+        If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
 
-'    '    ' 2. DC OFFSET: The 6581 ground is terrible.
-'    '    Dim internalInput As Double = input
-'    '    Const InternalOffset As Double = -0
-'    '    If Mode6581 Then
-'    '        internalInput += InternalOffset ' Push the signal off-center so it hits the ceiling first
-'    '    End If
+        ' === Nonlinear SID-style behaviour ===
+        If parent.Mode6581 Then
+            ' 1. Slight signal-dependent cutoff shift (MOSFET resistance)
+            Dim modAmount As Double = 0.001 * Math.Abs(output)
+            f *= 1.0 + modAmount
 
-'    '    ' === State variable filter with INSIDE-THE-LOOP distortion ===
-'    '    Dim hp As Double = internalInput - lowpass - q * bandpass
+            ' 2. Asymmetric, amplitude-dependent distortion (more top than bottom)
+            Dim asym As Double = 0.5              ' negative = compress negative peaks more
+            Dim drive As Double = 1.0               ' more drive for distortion
+            Dim clipInput As Double = output * drive * (1 + If(output > 0, asym, -asym))
 
-'    '    Dim bp As Double = bandpass + f * hp
-'    '    Dim lp As Double = lowpass + f * bp
+            ' 3. Nonlinear “soft distortion” curve
+            '    x / (1 + |x|) gives smooth saturation but still allows big peaks
+            Dim shaped As Double = clipInput ' / (1 + Math.Abs(clipInput))
 
-'    '    If Mode6581 Then
-'    '        ' 3. ASYMMETRIC CLIPPING INSIDE THE INTEGRATORS
-'    '        ' This is what causes the chaotic bifurcations (octave drops)
-'    '        bp = SoftSign(bp)
-'    '        lp = SoftSign(lp)
-'    '    End If
+            ' Optional: add a little cubic for more harmonic content
+            shaped += ((0.05 * (freq / 15000)) + 0.02) * clipInput ^ 3
 
-'    '    highpass = hp
-'    '    bandpass = bp
-'    '    lowpass = lp
+            ' 4. High-frequency bias sag (HP gain droop)
+            Dim biasHF As Double = Math.Sqrt(freq / (sampleRate / 2))
+            shaped *= (1.0 - 0.25 * biasHF)
 
-'    '    ' === Combine outputs ===
-'    '    Dim output As Double = 0.0
-'    '    If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
-'    '    If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
-'    '    If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
+            output = shaped
+        End If
 
-'    '    ' Remove the DC offset so your final audio isn't resting above zero
-'    '    If Mode6581 Then
-'    '        output -= InternalOffset
-'    '    End If
-
-'    '    Return output
-'    'End Function
-'    'Function SoftSign(x As Double) As Double
-'    '    Return x - (x ^ 3 / 40)
-'    'End Function
-'    '' A quick asymmetric clipper to simulate hitting the voltage rails differently
-'    'Function AsymmetricSoftClip(x As Double) As Double
-'    '    If x > 1.2 Then
-'    '        Return Math.Tanh(x) * 1.43944505 ' Harder clip on the top
-'    '    ElseIf x < -1.8 Then
-'    '        Return Math.Tanh(x) * 1.90112861 ' Softer/deeper clip on the bottom
-'    '    Else
-'    '        ' Basic soft clipping in the middle
-'    '        Return x - (x ^ 3) / 40
-'    '    End If
-'    'End Function
-'    Public Function ApplyFilter(input As Double) As Double
-'        ' === Basic filter math ===
-'        Dim freq = (InterpolatedCutoff() * CutoffMultiplier) + CutoffBias
-'        freq = Math.Clamp(freq, 1, sampleRate / 2 - 1)
-
-'        Dim f As Double = 2 * Math.Sin(Math.PI * freq / sampleRate)
-
-'        ' 1. VCR MODULATION: The audio input directly modulates the cutoff.
-'        ' We do this BEFORE the feedback loop.
-'        'If Mode6581 Then
-'        '    Dim vcrModAmount As Double = 0.05 ' Tweak this scalar
-'        '    Dim impact = 0.5
-'        '    f += (input) * vcrModAmount
-'        'End If
-
-'        f = Math.Clamp(f, 0.0001, 0.99) ' Keep it stable
-
-'        Dim q As Double = 1.0 - (resonance / ResonanceDivider)
-'        q = Math.Clamp(q, 0.01, 0.99)
-
-'        ' 2. DC OFFSET: The 6581 ground is terrible.
-'        Dim internalInput As Double = input
-'        'Const InternalOffset As Double = -0.3
-'        'If Mode6581 Then
-'        '    internalInput += InternalOffset ' Push the signal off-center so it hits the ceiling first
-'        'End If
-
-'        ' === State variable filter with INSIDE-THE-LOOP distortion ===
-'        Dim distortedBP = bandpass
-
-'        Dim hp As Double =
-'    internalInput - lowpass - q * distortedBP
-
-'        Dim bp = bandpass + f * NMOSStage(hp, bandpass)
-
-'        Dim lp = lowpass + f * NMOSStage(bp, lowpass)
-'        'If Mode6581 Then
-'        '    ' 3. ASYMMETRIC CLIPPING INSIDE THE INTEGRATORS
-'        '    ' This is what causes the chaotic bifurcations (octave drops)
-'        '    'bp = SoftSign(bp)
-'        '    Const divider = 6
-'        '    lp = SoftClipFeedback(lp / divider) * divider
-'        'End If
-
-'        highpass = hp
-'        bandpass = bp
-'        lowpass = lp
-
-'        ' === Combine outputs ===
-'        Dim output As Double = 0.0
-'        If (filterType And EFilterType.LowPass) <> 0 Then output += lowpass
-'        If (filterType And EFilterType.BandPass) <> 0 Then output += bandpass
-'        If (filterType And EFilterType.HighPass) <> 0 Then output += highpass
-
-'        ' Remove the DC offset so your final audio isn't resting above zero
-'        If Mode6581 Then
-'            'Const divider = 1.3
-'            'output = SoftClipFeedback(output / divider) * divider
-'            'output -= InternalOffset
-'        End If
-
-'        Return output
-'    End Function
-'    Function NMOSStage(input As Double,
-'                   state As Double) As Double
-
-'        ' Shift bias point
-'        Dim x = input - 1
-
-'        ' Gain collapses away from threshold
-'        Dim gain =
-'        1.0 / Math.Sqrt(1 + x * x * 0.4)
-
-'        Return x * gain + 0.85
-'    End Function
-'    Public Sub Reset()
-'        bandpass = 0
-'        lowpass = 0
-'        highpass = 0
-'    End Sub
-'End Class
+        Return output
+    End Function
+    Public Sub Reset()
+        bandpass = 0
+        lowpass = 0
+        highpass = 0
+    End Sub
+End Class

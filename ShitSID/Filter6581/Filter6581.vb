@@ -1,4 +1,6 @@
-﻿Public Class Filter6581
+﻿Imports System.CodeDom
+
+Public Class Filter6581
     Inherits Filter
     Public Property Mode6581 As Boolean = True
     Public Sub New()
@@ -178,5 +180,13 @@
             weight *= dir
         Next
         Return value / (weight / nonLinearity / nonLinearity) * (1 << maxBit)
+    End Function
+
+    ' partial port from FilterModelConfig class
+    Public Function estimateFrequency() As Double
+        Dim ik As Double = kinkedDac(fc, voiceNonlinearity, 11)
+        Dim dynamic As Double = minimumfetresistance + offset / Math.Pow(steepness, ik)
+        Dim R As Double = baseresistance * dynamic / (baseresistance + dynamic)
+        Return 1 / (2 * Math.PI * SIDCAPS_6581 * R)
     End Function
 End Class

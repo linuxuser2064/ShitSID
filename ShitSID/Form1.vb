@@ -7,6 +7,7 @@ Imports FFMediaToolkit.Encoding
 Public Class Form1
     Public SAMPLERATE As Integer = 176400
     Public sid As ShitSID
+    Public sid_fp As ShitSID_fp
     Public sidfile As SidFile
     Public fakeClockCount = 0
     Public cpu As New CPU
@@ -30,7 +31,11 @@ Public Class Form1
     End Sub
     Private Sub LoadSID()
         ' Reinitialize components
-        sid = New ShitSID(SAMPLERATE)
+        If My.Settings.UseNewFilter Then
+            sid = New ShitSID_fp(SAMPLERATE)
+        Else
+            sid = New ShitSID(SAMPLERATE)
+        End If
         'cpu.SP = 1
         mem(1) = &H37
         sidfile = SidFile.Load(OpenFileDialog1.FileName)
@@ -51,9 +56,25 @@ Public Class Form1
         For Each x As Voice In sid.Voices
             x.LoFiDuty = CheckBox1.Checked
         Next
-        sid.Filter.Mode6581 = CheckBox6.Checked
+        sid.Mode6581 = CheckBox6.Checked
         sid.InternalAudioFilter = AudioOutputSettings.CheckBox1.Checked
-        sid.Filter.setCurveProperties(NumericUpDown2.Value, NumericUpDown3.Value, NumericUpDown4.Value, 16125.1553F)
+        If My.Settings.UseNewFilter Then
+            Dim newFetResistance = 16125.1553
+            If RadioButton3.Checked Then
+                newFetResistance = 11961.908870403166
+            End If
+            If RadioButton4.Checked Then
+                newFetResistance = 14299.149638099827
+            End If
+            If RadioButton5.Checked Then
+                newFetResistance = 12914.5661141159
+            End If
+            DirectCast(sid, ShitSID_fp).FilterFP.setCurveProperties(NumericUpDown2.Value, NumericUpDown3.Value, NumericUpDown4.Value, newFetResistance)
+        Else
+            sid.Filter.CutoffBias = NumericUpDown3.Value
+            sid.Filter.ResonanceDivider = NumericUpDown4.Value
+            sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+        End If
         sid.BypassFilter = CheckBox7.Checked
         sid.VolumeSampleMode = RadioButton1.Checked
         If RadioButton3.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Dark
@@ -158,16 +179,22 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub NumericUpDown3_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown2.ValueChanged, NumericUpDown3.ValueChanged, NumericUpDown4.ValueChanged
         If sid IsNot Nothing Then
-            sid.Filter.setCurveProperties(NumericUpDown2.Value, NumericUpDown3.Value, NumericUpDown4.Value, 16125.1553F)
+            If My.Settings.UseNewFilter Then
+                DirectCast(sid, ShitSID_fp).FilterFP.setCurveProperties(NumericUpDown2.Value, NumericUpDown3.Value, NumericUpDown4.Value, 16125.1553F)
+            Else
+                sid.Filter.CutoffBias = NumericUpDown3.Value
+                sid.Filter.ResonanceDivider = NumericUpDown4.Value
+                sid.Filter.CutoffMultiplier = NumericUpDown2.Value
+            End If
         End If
     End Sub
     Private Sub CheckBox6_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox6.CheckedChanged
         If sid IsNot Nothing Then
-            If CheckBox6.Checked Then
-                sid.Filter.Mode6581 = True
-                sid.Filter.reset()
+            sid.Mode6581 = CheckBox6.Checked
+            sid.Filter.reset()
+            If My.Settings.UseNewFilter Then
+                DirectCast(sid, ShitSID_fp).FilterFP.reset()
             Else
-                sid.Filter.Mode6581 = False
                 sid.Filter.reset()
             End If
         End If
@@ -268,24 +295,34 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         AudioOutputSettings.ShowDialog()
     End Sub
     Private Sub RadioButton5_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton5.CheckedChanged, RadioButton4.CheckedChanged, RadioButton3.CheckedChanged
-        If sid IsNot Nothing Then
+        If My.Settings.UseNewFilter Then
+            Dim newFetResistance = 16125.1553
             If RadioButton3.Checked Then
-                sid.Filter.setCurveAndDistortionDefaults()
-                sid.Filter.setCurveProperties(1399768.3253307983, 553018906.8926692, 1.0051493199361266, 11961.908870403166)
+                NumericUpDown2.Value = 1399768.3253307983
+                NumericUpDown3.Value = 553018906.8926692
+                NumericUpDown4.Value = 1.0051493199361266
+                newFetResistance = 11961.908870403166
             End If
             If RadioButton4.Checked Then
-                sid.Filter.setCurveAndDistortionDefaults()
-                sid.Filter.setCurveProperties(1522171.9229830841, 21729926.667291082, 1.0049948025374751, 14299.149638099827)
+                NumericUpDown2.Value = 1522171.9229830841
+                NumericUpDown3.Value = 21729926.667291082
+                NumericUpDown4.Value = 1.0049948025374751
+                newFetResistance = 14299.149638099827
             End If
             If RadioButton5.Checked Then
-                sid.Filter.setCurveAndDistortionDefaults()
-                sid.Filter.setCurveProperties(1164920.4999651583, 12915042.165290257, 1.0058853753357735, 12914.5661141159)
+                NumericUpDown2.Value = 1164920.4999651583
+                NumericUpDown3.Value = 12915042.165290257
+                NumericUpDown4.Value = 1.0058853753357735
+                newFetResistance = 12914.5661141159
             End If
-            Dim got = provider.sid.Filter.getCurveProperties
-            NumericUpDown2.Value = got(0)
-            NumericUpDown3.Value = got(1)
-            NumericUpDown4.Value = got(2)
+
+            If sid IsNot Nothing Then
+                Dim newsid = DirectCast(sid, ShitSID_fp)
+                newsid.FilterFP.setCurveAndDistortionDefaults()
+                newsid.FilterFP.setCurveProperties(NumericUpDown2.Value, NumericUpDown3.Value, NumericUpDown4.Value, newFetResistance)
+            End If
         End If
+        'End If
     End Sub
 
     Private Sub NumericUpDown6_ValueChanged(sender As Object, e As EventArgs) Handles NumericUpDown6.ValueChanged
@@ -314,11 +351,40 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub Button7_Click(sender As Object, e As EventArgs) Handles Button7.Click
         If provider Is Nothing Then Exit Sub
-        provider.sid.Filter.reset()
-        provider.sid.Filter.setCurveAndDistortionDefaults()
-        Dim got = provider.sid.Filter.getCurveProperties
-        NumericUpDown2.Value = got(0)
-        NumericUpDown3.Value = got(1)
-        NumericUpDown4.Value = got(2)
+        If My.Settings.UseNewFilter Then
+            Dim newsid = DirectCast(sid, ShitSID_fp)
+            newsid.FilterFP.reset()
+            newsid.FilterFP.setCurveAndDistortionDefaults()
+            Dim got = newsid.FilterFP.getCurveProperties
+            NumericUpDown2.Value = got(0)
+            NumericUpDown3.Value = got(1)
+            NumericUpDown4.Value = got(2)
+        End If
+    End Sub
+
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        My.Settings.Reload()
+        If Not My.Settings.UseNewFilter Then
+            Label6.Text = "Cutoff multiplier"
+            NumericUpDown2.DecimalPlaces = 3
+            NumericUpDown2.Increment = New Decimal(New Integer() {1, 0, 0, 65536})
+            NumericUpDown2.Maximum = New Decimal(New Integer() {32767, 0, 0, 0})
+            NumericUpDown2.Minimum = 0
+            NumericUpDown2.Value = New Decimal(New Integer() {1, 0, 0, 0})
+
+            Label5.Text = "Resonance divider"
+            NumericUpDown3.Increment = New Decimal(New Integer() {50, 0, 0, 0})
+            NumericUpDown3.Value = 0
+            NumericUpDown3.Maximum = New Decimal(New Integer() {20154, 0, 0, 0})
+            NumericUpDown3.Minimum = New Decimal(New Integer() {20154, 0, 0, Integer.MinValue})
+
+            Label4.Text = "Cutoff bias"
+            NumericUpDown4.DecimalPlaces = 2
+            NumericUpDown4.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
+            NumericUpDown4.Maximum = New Decimal(New Integer() {32768, 0, 0, 0})
+            NumericUpDown4.Value = New Decimal(New Integer() {2, 0, 0, 0})
+
+            CheckBox6.Checked = False
+        End If
     End Sub
 End Class

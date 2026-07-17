@@ -26,13 +26,14 @@ Partial Class AudioOutputSettings
         Label3 = New Label()
         ComboBox1 = New ComboBox()
         CheckBox1 = New CheckBox()
+        CheckBox2 = New CheckBox()
         SuspendLayout()
         ' 
         ' Label3
         ' 
         Label3.AutoSize = True
         Label3.FlatStyle = FlatStyle.System
-        Label3.Location = New Point(16, 9)
+        Label3.Location = New Point(12, 9)
         Label3.Name = "Label3"
         Label3.Size = New Size(72, 15)
         Label3.TabIndex = 18
@@ -43,7 +44,7 @@ Partial Class AudioOutputSettings
         ComboBox1.FlatStyle = FlatStyle.System
         ComboBox1.FormattingEnabled = True
         ComboBox1.Items.AddRange(New Object() {"8000", "11025", "16000", "22050", "32000", "44100", "48000", "64000", "65536", "88200", "96000", "176400", "192000"})
-        ComboBox1.Location = New Point(90, 6)
+        ComboBox1.Location = New Point(86, 6)
         ComboBox1.Name = "ComboBox1"
         ComboBox1.Size = New Size(121, 23)
         ComboBox1.TabIndex = 17
@@ -55,18 +56,32 @@ Partial Class AudioOutputSettings
         CheckBox1.Checked = True
         CheckBox1.CheckState = CheckState.Checked
         CheckBox1.FlatStyle = FlatStyle.System
-        CheckBox1.Location = New Point(12, 35)
+        CheckBox1.Location = New Point(8, 35)
         CheckBox1.Name = "CheckBox1"
         CheckBox1.Size = New Size(166, 20)
         CheckBox1.TabIndex = 19
         CheckBox1.Text = "Enable audio output filter"
         CheckBox1.UseVisualStyleBackColor = True
         ' 
+        ' CheckBox2
+        ' 
+        CheckBox2.AutoSize = True
+        CheckBox2.Checked = True
+        CheckBox2.CheckState = CheckState.Checked
+        CheckBox2.FlatStyle = FlatStyle.System
+        CheckBox2.Location = New Point(8, 61)
+        CheckBox2.Name = "CheckBox2"
+        CheckBox2.Size = New Size(205, 35)
+        CheckBox2.TabIndex = 20
+        CheckBox2.Text = "Enable improved filter emulation" & vbCrLf & "(needs restart to take effect)"
+        CheckBox2.UseVisualStyleBackColor = True
+        ' 
         ' AudioOutputSettings
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(319, 135)
+        Controls.Add(CheckBox2)
         Controls.Add(CheckBox1)
         Controls.Add(Label3)
         Controls.Add(ComboBox1)
@@ -80,4 +95,5 @@ Partial Class AudioOutputSettings
     Friend WithEvents Label3 As Label
     Friend WithEvents ComboBox1 As ComboBox
     Friend WithEvents CheckBox1 As CheckBox
+    Friend WithEvents CheckBox2 As CheckBox
 End Class

@@ -16,4 +16,15 @@
         Form1.FormBorderStyle = FormBorderStyle.Sizable
         Form1.Location = loc
     End Sub
+
+    Private Sub AudioOutputSettings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        My.Settings.Reload()
+        CheckBox2.Checked = My.Settings.UseNewFilter
+        AddHandler CheckBox2.CheckedChanged, AddressOf CheckBox2_CheckedChanged
+    End Sub
+
+    Private Sub CheckBox2_CheckedChanged(sender As Object, e As EventArgs)
+        My.Settings.UseNewFilter = CheckBox2.Checked
+        My.Settings.Save()
+    End Sub
 End Class

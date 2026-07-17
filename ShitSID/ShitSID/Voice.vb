@@ -83,25 +83,25 @@
 
                 dacInput = currentNoise
             Case "saw+tri"
-                If Parent.Filter.Mode6581 Then
+                If Parent.Mode6581 Then
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) * 16)
                 Else
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) * 16)
                 End If
             Case "tri+pulse"
-                If Parent.Filter.Mode6581 Then
+                If Parent.Mode6581 Then
                     dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
                 Else
                     dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) * 16)
                 End If
             Case "saw+pulse"
-                If Parent.Filter.Mode6581 Then
+                If Parent.Mode6581 Then
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) * 16)
                 Else
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) * 16)
                 End If
             Case "saw+tri+pulse"
-                If Parent.Filter.Mode6581 Then
+                If Parent.Mode6581 Then
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
                 Else
                     dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)

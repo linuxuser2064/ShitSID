@@ -442,7 +442,7 @@ Partial Class Form1
         Button5.Name = "Button5"
         Button5.Size = New Size(91, 23)
         Button5.TabIndex = 17
-        Button5.Text = "Audio settings"
+        Button5.Text = "Settings"
         Button5.UseVisualStyleBackColor = True
         ' 
         ' GroupBox3

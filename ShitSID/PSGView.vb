@@ -117,34 +117,38 @@ CommonFont, Brushes.White, cX(120), cY(44 + yOffset))
         g.DrawString($"Filter:", CommonFont, Brushes.White, cX(2), cY(164))
 
         g.DrawString("Mode:", CommonFont, Brushes.White, cX(2), cY(176))
-        'If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.LowPass) Then g.FillRectangle(EnabledOptionBrush, 43, 175, 16, 9)
-        'If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.BandPass) Then g.FillRectangle(EnabledOptionBrush, 60, 175, 16, 9)
-        'If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.HighPass) Then g.FillRectangle(EnabledOptionBrush, 77, 175, 16, 9)
-        If SID.Filter.lp Then g.FillRectangle(EnabledOptionBrush, 43, 175, 16, 9)
-        If SID.Filter.bp Then g.FillRectangle(EnabledOptionBrush, 60, 175, 16, 9)
-        If SID.Filter.hp Then g.FillRectangle(EnabledOptionBrush, 77, 175, 16, 9)
+        If My.Settings.UseNewFilter Then
+            Dim cast = DirectCast(SID, ShitSID_fp)
+            If cast.FilterFP.lp Then g.FillRectangle(EnabledOptionBrush, 43, 175, 16, 9)
+            If cast.FilterFP.bp Then g.FillRectangle(EnabledOptionBrush, 60, 175, 16, 9)
+            If cast.FilterFP.hp Then g.FillRectangle(EnabledOptionBrush, 77, 175, 16, 9)
+        Else
+            If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.LowPass) Then g.FillRectangle(EnabledOptionBrush, 43, 175, 16, 9)
+            If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.BandPass) Then g.FillRectangle(EnabledOptionBrush, 60, 175, 16, 9)
+            If SID.Filter.filterType.HasFlag(SIDFilter.EFilterType.HighPass) Then g.FillRectangle(EnabledOptionBrush, 77, 175, 16, 9)
+        End If
         g.DrawImageUnscaled(My.Resources.PSGViewResources.filt_lp, 44, 176)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.filt_bp, 61, 176)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.filt_hp, 78, 176)
 
         g.DrawString("Resonance:", CommonFont, Brushes.White, cX(97), cY(176))
-        Dim filled = CInt((SID.Filter.res / 15) * 48)
+        Dim filled = (SID.GetResonance \ 15) * 48
         Dim remainder = 48 - filled
-        g.FillRectangle(ProgressBarForegroundBrush, 155, 176, filled, 7)
+        g.FillRectangle(ProgressBarForegroundBrush, 154, 176, filled, 7)
         g.FillRectangle(BarBackgroundBrush, 202 - remainder, 176, remainder, 7)
-        g.DrawString(CInt(SID.Filter.res), CommonFont, Brushes.White, cX(208), cY(176))
+        g.DrawString(SID.GetResonance, CommonFont, Brushes.White, cX(208), cY(176))
 
         g.DrawString("Cutoff:", CommonFont, Brushes.White, cX(2), cY(186))
-        filled = CInt(SID.Filter.fc / 12.79375)
+        filled = CInt(SID.GetCutoff / 12.79375)
         g.FillRectangle(ScrollbarForegroundBrush, 43, 186, filled, 7)
         remainder = 160 - filled
         g.FillRectangle(BarBackgroundBrush, 202 - remainder, 186, remainder, 7)
 
         g.DrawRectangle(ScrollbarTrackOuterPen, 43 + filled - 1, 185, 2, 9)
         g.DrawLine(ScrollbarTrackInnerPen, 43 + filled, 186, 43 + filled, 186 + 7)
-        'g.DrawString(Math.Floor(SID.Filter.InterpolatedCutoff), CommonFont, Brushes.White, cX(208), cY(186))
-        'g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(186))
-        g.DrawString(SID.Filter.fc, CommonFont, Brushes.White, cX(208), cY(186))
+        g.DrawString(Math.Floor(SID.GetCutoffHz), CommonFont, Brushes.White, cX(208), cY(186))
+        g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(186))
+        'g.DrawString(SID.Filter.fc, CommonFont, Brushes.White, cX(208), cY(186))
 
         g.FillRectangle(SectionLabelBrush, 0, 196, 38, 11)
         g.DrawString($"Global:", CommonFont, Brushes.White, cX(2), cY(198))
