@@ -1,9 +1,11 @@
-﻿Imports NAudio.Wave
+﻿Imports System.IO
+Imports System.Windows.Forms.VisualStyles.VisualStyleElement.Button
+Imports FFMediaToolkit.Encoding
+Imports FFmpeg.AutoGen
 Imports Highbyte.DotNet6502
-Imports System.IO
 Imports NAudio.CoreAudioApi
 Imports NAudio.MediaFoundation
-Imports FFMediaToolkit.Encoding
+Imports NAudio.Wave
 Public Class Form1
     Public SAMPLERATE As Integer = 176400
     Public sid As ShitSID
@@ -36,18 +38,26 @@ Public Class Form1
         Else
             sid = New ShitSID(SAMPLERATE)
         End If
-        'cpu.SP = 1
-        mem(1) = &H37
-        sidfile = SidFile.Load(OpenFileDialog1.FileName)
-        If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
-            mem(&H2A6) = 1 ' PAL
+        Dim LoadCSV = OpenFileDialog1.FileName.ToLower.EndsWith(".csv")
+        Dim sidDump As SidTraceReader = Nothing
+        If LoadCSV Then
+            ' oh god
+            sidDump = New SidTraceReader(OpenFileDialog1.FileName)
         End If
+        'cpu.SP = 1
+        If Not LoadCSV Then
+            mem(1) = &H37
+            sidfile = SidFile.Load(OpenFileDialog1.FileName)
+            If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
+                mem(&H2A6) = 1 ' PAL
+            End If
 
-        ' Set song number from UI or default
-        If NumericUpDown1.Value > 0 Then
-            cpu.A = NumericUpDown1.Value - 1
-        Else
-            cpu.A = sidfile.StartSong - 1
+            ' Set song number from UI or default
+            If NumericUpDown1.Value > 0 Then
+                cpu.A = NumericUpDown1.Value - 1
+            Else
+                cpu.A = sidfile.StartSong - 1
+            End If
         End If
         sid.Voices(0).MuteVoice = CheckBox2.Checked
         sid.Voices(1).MuteVoice = CheckBox3.Checked
@@ -81,16 +91,24 @@ Public Class Form1
         If RadioButton4.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Average
         If RadioButton5.Checked Then sid.FilterCurve = ShitSID.FilterCurveType.Bright
         CheckBox6_CheckedChanged(Nothing, Nothing)
-        cpu.PC = sidfile.InitAddress
-        Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
+        If Not LoadCSV Then
+            cpu.PC = sidfile.InitAddress
+            Console.WriteLine($"Init address: {sidfile.InitAddress.ToString("X4")}")
+        End If
         If CheckBox5.Checked Then
             NumericUpDown6.Value = 60
         End If
         PSGViewer = New PSGView(sid)
-        PSGViewer.ShowPCMGraph = CheckBox9.Checked
-        provider = New SidAudioProvider(sid, cpu, mem, PSGViewer, SAMPLERATE)
+        PSGViewer.ShowPCMGraph = PSGViewVolumeGraphBox.Checked
+        If Not LoadCSV Then
+            provider = New SidAudioProvider(sid, cpu, mem, PSGViewer, SAMPLERATE)
+        Else
+            provider = New SidAudioProvider(sid, sidDump, PSGViewer, SAMPLERATE)
+        End If
         provider.Volume = TrackBar1.Value / 100
         AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
+        provider.EnablePSGView = PSGViewEnableBox.Checked
+        provider.PSGViewDivider = PSGViewDividerBox.Value
         provider.TickRate = NumericUpDown6.Value
         provider.UseNTSC = CheckBox5.Checked
         PSGViewForm.Show()
@@ -191,11 +209,11 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
     Private Sub CheckBox6_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox6.CheckedChanged
         If sid IsNot Nothing Then
             sid.Mode6581 = CheckBox6.Checked
-            sid.Filter.reset()
+            sid.Filter.Reset()
             If My.Settings.UseNewFilter Then
                 DirectCast(sid, ShitSID_fp).FilterFP.reset()
             Else
-                sid.Filter.reset()
+                sid.Filter.Reset()
             End If
         End If
         RadioButton3.Enabled = CheckBox6.Checked
@@ -252,8 +270,10 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         MediaFoundationApi.Startup()
         Console.WriteLine("Loading SID...")
         LoadSID()
-        RemoveHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
-        AddHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
+        If PSGViewEnableBox.Checked Then
+            RemoveHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
+            AddHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
+        End If
         provider.sidfile = sidfile
         provider.InitSIDFile()
         Console.WriteLine("Creating MediaType...")
@@ -261,22 +281,28 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         Console.WriteLine("Creating MF encoder...")
         Dim wavProv As New MediaFoundationEncoder(type)
         wavProv.DefaultReadBufferSize = SAMPLERATE \ NumericUpDown6.Value
-        Console.WriteLine("Creating video container...")
-        Dim opts = New VideoEncoderSettings(512, 512, NumericUpDown6.Value, VideoCodec.H264) With {.Bitrate = 3200 * 1000, .EncoderPreset = EncoderPreset.Faster}
-        opts.CodecOptions("profile") = "high444"
-        opts.CodecOptions("pix_fmt") = "yuv444p"
-        opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444
-        EncodeVid = MediaBuilder.CreateContainer(Path.Combine(outputFolder, $"{outputFileNoExt}.mp4"), ContainerFormat.MP4).
+        If PSGViewEnableBox.Checked Then
+            Console.WriteLine("Creating video container...")
+            Dim opts = New VideoEncoderSettings(512, 512, NumericUpDown6.Value, VideoCodec.H264) With {.Bitrate = 3200 * 1000, .EncoderPreset = EncoderPreset.Faster}
+            opts.CodecOptions("profile") = "high444"
+            opts.CodecOptions("pix_fmt") = "yuv444p"
+            opts.EncoderPreset = EncoderPreset.Faster
+            opts.Bitrate = 3200 * 1000
+            opts.FramerateRational = New AVRational With {.num = NumericUpDown6.Value, .den = PSGViewDividerBox.Value}
+            opts.VideoFormat = FFMediaToolkit.Graphics.ImagePixelFormat.Yuv444
+            EncodeVid = MediaBuilder.CreateContainer(Path.Combine(outputFolder, $"{outputFileNoExt}.mp4"), ContainerFormat.MP4).
             WithVideo(opts).Create
+        End If
         Console.WriteLine("Encoding...")
         provider.runCPU = True
         wavProv.Encode(Path.Combine(outputFolder, $"{outputFileNoExt}.wav"), provider.Take(TimeSpan.FromSeconds(NumericUpDown5.Value)).ToWaveProvider)
-        EncodeVid.Dispose()
+        If PSGViewEnableBox.Checked Then
+            EncodeVid.Dispose()
+            RemoveHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
+            AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
+        End If
         Console.WriteLine("Done")
         Me.Enabled = True
-        RemoveHandler provider.PSGViewFrame, AddressOf EncodeFrameHandler
-        AddHandler provider.PSGViewFrame, AddressOf provider_PSGViewFrame
-
     End Sub
     Private EncodeVid As MediaOutput
     Private Sub EncodeFrameHandler(frame As Bitmap)
@@ -339,9 +365,9 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
         'FastBitmapRenderer.RenderBitmapStretched(PSGViewFormHandle, frame, 0, 0, New Drawing.Size(512, 512))
     End Sub
 
-    Private Sub CheckBox9_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox9.CheckedChanged
+    Private Sub CheckBox9_CheckedChanged(sender As Object, e As EventArgs) Handles PSGViewVolumeGraphBox.CheckedChanged
         If PSGViewer Is Nothing Then Exit Sub
-        PSGViewer.ShowPCMGraph = CheckBox9.Checked
+        PSGViewer.ShowPCMGraph = PSGViewVolumeGraphBox.Checked
     End Sub
 
     Private Sub TrackBar1_Scroll(sender As Object, e As EventArgs) Handles TrackBar1.Scroll
@@ -386,5 +412,15 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
             CheckBox6.Checked = False
         End If
+    End Sub
+
+    Private Sub PSGViewDividerBox_ValueChanged(sender As Object, e As EventArgs) Handles PSGViewDividerBox.ValueChanged
+        If provider Is Nothing Then Exit Sub
+        provider.PSGViewDivider = PSGViewDividerBox.Value
+    End Sub
+
+    Private Sub PSGViewEnableBox_CheckedChanged(sender As Object, e As EventArgs) Handles PSGViewEnableBox.CheckedChanged
+        If provider Is Nothing Then Exit Sub
+        provider.EnablePSGView = PSGViewEnableBox.Checked
     End Sub
 End Class

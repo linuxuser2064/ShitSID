@@ -30,10 +30,19 @@ Public Class SidAudioProvider
     Dim volumebuf As New List(Of Byte)
     Dim volphase As Integer = 0
 
+    Public EnablePSGView As Boolean = True
+    Public PSGViewDivider As Integer = 8
+    Dim psgPhase As Integer = 0
+
     Public EnablePCMCapture As Boolean = False
     Dim lastVol As Byte = 0
     Dim CycleCounter As UInt128 = 0
-    'Const voldivider As Integer = 16
+
+    Public ReadCSVDump As Boolean = False ' the big one
+    Public reader As SidTraceReader
+    Dim sampleCounter As Integer = 0
+    Dim cycleDelay As Long = 50
+    Dim data As SidTraceEntry = New SidTraceEntry With {.AbsoluteCycles = 0, .RelativeCycles = 50, .Address = &HD400, .Value = 0}
     Public ReadOnly Property voldivider As Integer
         Get
             Return CInt(sampleRate / 5512.5)
@@ -61,6 +70,17 @@ Public Class SidAudioProvider
         For i = 0 To 255
             volumebuf.Add(15)
         Next
+    End Sub
+    Public Sub New(ByRef sidEmu As ShitSID, traceReader As SidTraceReader, ByRef PSGView As PSGView, Optional sampleRateHz As Integer = 44100)
+        Me.sampleRate = sampleRateHz
+        Me.sid = sidEmu
+        Me.psgView = PSGView
+        vWaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRateHz, 1)
+        For i = 0 To 255
+            volumebuf.Add(15)
+        Next
+        reader = traceReader
+        ReadCSVDump = True
     End Sub
     Public Sub DisAsmState(state As ExecState, Optional wait As Boolean = False)
         If cpu.PC = &H0 Then Exit Sub
@@ -93,6 +113,7 @@ Public Class SidAudioProvider
         LastSP = cpu.SP
     End Sub
     Public Sub InitSIDFile()
+        If ReadCSVDump Then Exit Sub
         'mem.MapRAM(sidfile.LoadAddress, sidfile.Data)
         For i = sidfile.LoadAddress To sidfile.LoadAddress + sidfile.Data.Length - 1
             mem(i) = sidfile.Data(i - sidfile.LoadAddress)
@@ -171,34 +192,68 @@ Public Class SidAudioProvider
             Dim wholeCycles As Long = CLng(Math.Floor(sidPhaseFrac))
             sidPhase += wholeCycles
             sidPhaseFrac -= wholeCycles
-            cpuClockPhase += 1
 
-            If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame
-                cpu.CPUInterrupts.SetIRQSourceActive("raster", True)
-                cpu.PC = playAddr
-                cpuClockPhase -= (sampleRate \ TickRate)
-                RaiseEvent PSGViewFrame(psgView.Frame(volumebuf.ToArray, 2))
+            If Not ReadCSVDump Then
+                cpuClockPhase += 1
+
+                If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame
+                    cpu.CPUInterrupts.SetIRQSourceActive("raster", True)
+                    cpu.PC = playAddr
+                    cpuClockPhase -= (sampleRate \ TickRate)
+                    If EnablePSGView Then
+                        If psgPhase = 0 Then RaiseEvent PSGViewFrame(psgView.Frame(volumebuf.ToArray, 2))
+                        psgPhase += 1
+                        psgPhase = psgPhase Mod PSGViewDivider
+                    End If
+                End If
             End If
 
             ' --- advance SID phase while handling CPU ---
             While sidPhase >= 1
-                If runCPU Then
-                    Dim state = cpu.ExecuteOneInstruction(mem)
-                    'DisAsmState(state, True)
-                    sidPhase -= state.CyclesConsumed
-                    CycleCounter += state.CyclesConsumed
-                    ' Clock the SID for each CPU cycle
-                    For cyc = CULng(1) To state.CyclesConsumed
-                        sid.Clock()
-                    Next
-                    CIA2.ProcessTimers(state.CyclesConsumed)
-                    'CIA1.ProcessTimers(state.CyclesConsumed)
-                Else
-                    ' If CPU not running, just clock SID
-                    sid.Clock()
+                If ReadCSVDump Then
+                    ' clock cycle
+                    If data.Address = 0 Then
+                        Return 0 ' end of stream
+                    End If
+                    If cycleDelay >= data.RelativeCycles Then
+                        sid.WriteRegister(data.Address, data.Value)
+                        data = reader.ReadNext
+                        cycleDelay = 0
+                    End If
                     sidPhase -= 1
+                    cycleDelay += 1
+                    sid.Clock()
+                Else
+                    If runCPU Then
+                        Dim state = cpu.ExecuteOneInstruction(mem)
+                        'DisAsmState(state, True)
+                        sidPhase -= state.CyclesConsumed
+                        CycleCounter += state.CyclesConsumed
+                        ' Clock the SID for each CPU cycle
+                        For cyc = CULng(1) To state.CyclesConsumed
+                            sid.Clock()
+                        Next
+                        CIA2.ProcessTimers(state.CyclesConsumed)
+                        'CIA1.ProcessTimers(state.CyclesConsumed)
+                    Else
+                        ' If CPU not running, just clock SID
+                        sid.Clock()
+                        sidPhase -= 1
+                    End If
                 End If
             End While
+
+            If ReadCSVDump Then
+                If sampleCounter = (sampleRate \ 50) Then
+                    If EnablePSGView Then
+                        If psgPhase = 0 Then RaiseEvent PSGViewFrame(psgView.Frame(volumebuf.ToArray, 2))
+                        psgPhase += 1
+                        psgPhase = psgPhase Mod PSGViewDivider
+                    End If
+                    sampleCounter = 0
+                End If
+                sampleCounter += 1
+            End If
 
             volphase += 1
             If volphase >= voldivider \ 2 Then

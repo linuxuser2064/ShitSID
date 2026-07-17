@@ -67,8 +67,11 @@ Partial Class Form1
         Label7 = New Label()
         Label8 = New Label()
         SaveFileDialog1 = New SaveFileDialog()
-        CheckBox9 = New CheckBox()
+        PSGViewVolumeGraphBox = New CheckBox()
         GroupBox5 = New GroupBox()
+        PSGViewDividerBox = New NumericUpDown()
+        Label10 = New Label()
+        PSGViewEnableBox = New CheckBox()
         TrackBar1 = New TrackBar()
         Label9 = New Label()
         CheckBox10 = New CheckBox()
@@ -83,6 +86,7 @@ Partial Class Form1
         GroupBox4.SuspendLayout()
         CType(NumericUpDown6, ComponentModel.ISupportInitialize).BeginInit()
         GroupBox5.SuspendLayout()
+        CType(PSGViewDividerBox, ComponentModel.ISupportInitialize).BeginInit()
         CType(TrackBar1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -99,7 +103,7 @@ Partial Class Form1
         ' OpenFileDialog1
         ' 
         OpenFileDialog1.FileName = "OpenFileDialog1"
-        OpenFileDialog1.Filter = "SID files|*.SID|All files|*"
+        OpenFileDialog1.Filter = "SID files|*.SID|CSV dumps|*.csv|All files|*"
         ' 
         ' CheckBox1
         ' 
@@ -156,7 +160,7 @@ Partial Class Form1
         ' OpenFileDialog2
         ' 
         OpenFileDialog2.FileName = "OpenFileDialog1"
-        OpenFileDialog2.Filter = "SID files|*.SID|All files|*"
+        OpenFileDialog2.Filter = "SID files|*.SID|CSV dumps|*.csv|All files|*"
         ' 
         ' Button3
         ' 
@@ -548,27 +552,62 @@ Partial Class Form1
         ' 
         SaveFileDialog1.Filter = "Wave files|*.wav|All files|*"
         ' 
-        ' CheckBox9
+        ' PSGViewVolumeGraphBox
         ' 
-        CheckBox9.AutoSize = True
-        CheckBox9.FlatStyle = FlatStyle.System
-        CheckBox9.Location = New Point(6, 18)
-        CheckBox9.Name = "CheckBox9"
-        CheckBox9.Size = New Size(106, 20)
-        CheckBox9.TabIndex = 13
-        CheckBox9.Text = "Volume graph"
-        CheckBox9.UseVisualStyleBackColor = True
+        PSGViewVolumeGraphBox.AutoSize = True
+        PSGViewVolumeGraphBox.FlatStyle = FlatStyle.System
+        PSGViewVolumeGraphBox.Location = New Point(6, 59)
+        PSGViewVolumeGraphBox.Name = "PSGViewVolumeGraphBox"
+        PSGViewVolumeGraphBox.Size = New Size(106, 20)
+        PSGViewVolumeGraphBox.TabIndex = 13
+        PSGViewVolumeGraphBox.Text = "Volume graph"
+        PSGViewVolumeGraphBox.UseVisualStyleBackColor = True
         ' 
         ' GroupBox5
         ' 
-        GroupBox5.Controls.Add(CheckBox9)
+        GroupBox5.Controls.Add(PSGViewDividerBox)
+        GroupBox5.Controls.Add(Label10)
+        GroupBox5.Controls.Add(PSGViewEnableBox)
+        GroupBox5.Controls.Add(PSGViewVolumeGraphBox)
         GroupBox5.FlatStyle = FlatStyle.System
         GroupBox5.Location = New Point(6, 212)
         GroupBox5.Name = "GroupBox5"
-        GroupBox5.Size = New Size(144, 46)
+        GroupBox5.Size = New Size(144, 85)
         GroupBox5.TabIndex = 23
         GroupBox5.TabStop = False
         GroupBox5.Text = "PSG View"
+        ' 
+        ' PSGViewDividerBox
+        ' 
+        PSGViewDividerBox.Location = New Point(59, 38)
+        PSGViewDividerBox.Maximum = New Decimal(New Integer() {128, 0, 0, 0})
+        PSGViewDividerBox.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
+        PSGViewDividerBox.Name = "PSGViewDividerBox"
+        PSGViewDividerBox.Size = New Size(79, 23)
+        PSGViewDividerBox.TabIndex = 16
+        PSGViewDividerBox.Value = New Decimal(New Integer() {1, 0, 0, 0})
+        ' 
+        ' Label10
+        ' 
+        Label10.AutoSize = True
+        Label10.Location = New Point(6, 40)
+        Label10.Name = "Label10"
+        Label10.Size = New Size(47, 15)
+        Label10.TabIndex = 15
+        Label10.Text = "Divider:"
+        ' 
+        ' PSGViewEnableBox
+        ' 
+        PSGViewEnableBox.AutoSize = True
+        PSGViewEnableBox.Checked = True
+        PSGViewEnableBox.CheckState = CheckState.Checked
+        PSGViewEnableBox.FlatStyle = FlatStyle.System
+        PSGViewEnableBox.Location = New Point(6, 18)
+        PSGViewEnableBox.Name = "PSGViewEnableBox"
+        PSGViewEnableBox.Size = New Size(67, 20)
+        PSGViewEnableBox.TabIndex = 14
+        PSGViewEnableBox.Text = "Enable"
+        PSGViewEnableBox.UseVisualStyleBackColor = True
         ' 
         ' TrackBar1
         ' 
@@ -596,11 +635,11 @@ Partial Class Form1
         ' 
         CheckBox10.AutoSize = True
         CheckBox10.FlatStyle = FlatStyle.System
-        CheckBox10.Location = New Point(6, 277)
+        CheckBox10.Location = New Point(156, 277)
         CheckBox10.Name = "CheckBox10"
-        CheckBox10.Size = New Size(427, 20)
+        CheckBox10.Size = New Size(388, 20)
         CheckBox10.TabIndex = 26
-        CheckBox10.Text = "enable variable delay linear pcm capture algorithm filesystem writer stream"
+        CheckBox10.Text = "enable variable delay linear pcm capture algorithm filesystem writer"
         CheckBox10.UseVisualStyleBackColor = True
         ' 
         ' Form1
@@ -650,6 +689,7 @@ Partial Class Form1
         CType(NumericUpDown6, ComponentModel.ISupportInitialize).EndInit()
         GroupBox5.ResumeLayout(False)
         GroupBox5.PerformLayout()
+        CType(PSGViewDividerBox, ComponentModel.ISupportInitialize).EndInit()
         CType(TrackBar1, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
         PerformLayout()
@@ -697,11 +737,14 @@ Partial Class Form1
     Friend WithEvents Label7 As Label
     Friend WithEvents Label8 As Label
     Friend WithEvents SaveFileDialog1 As SaveFileDialog
-    Friend WithEvents CheckBox9 As CheckBox
+    Friend WithEvents PSGViewVolumeGraphBox As CheckBox
     Friend WithEvents GroupBox5 As GroupBox
     Friend WithEvents TrackBar1 As TrackBar
     Friend WithEvents Label9 As Label
     Friend WithEvents CheckBox10 As CheckBox
     Friend WithEvents Button7 As Button
+    Friend WithEvents Label10 As Label
+    Friend WithEvents PSGViewEnableBox As CheckBox
+    Friend WithEvents PSGViewDividerBox As NumericUpDown
 
 End Class
