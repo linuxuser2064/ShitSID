@@ -30,7 +30,7 @@ Namespace My
         Public Sub ShitSID_Startup() Handles Me.Startup
             AllocConsole()
             My.Settings.Reload()
-            Console.WriteLine("ShitSID version DEVELOPMENT - (C) linuxuser2064")
+            Console.WriteLine("ShitSID version 1.5.0 - (C) linuxuser2064")
         End Sub
     End Class
 End Namespace

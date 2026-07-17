@@ -7,6 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <MyType>WindowsForms</MyType>
     <ApplicationIcon>ShitSID_icon.ico</ApplicationIcon>
+    <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -17,11 +18,12 @@
     <RemoveIntegerChecks>True</RemoveIntegerChecks>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="LoreAccurate6581\**" />
-    <EmbeddedResource Remove="LoreAccurate6581\**" />
-    <None Remove="LoreAccurate6581\**" />
-  </ItemGroup>
+  <PropertyGroup>
+    <AssemblyVersion>1.5.0.0</AssemblyVersion>
+    <FileVersion>1.5.0.0</FileVersion>
+    <Version>1.5.0</Version>
+    <InformationalVersion>1.5.0</InformationalVersion>
+  </PropertyGroup>
 
   <ItemGroup>
     <Content Include="ShitSID_icon.ico" />
@@ -41,9 +43,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="C64Util">
-      <HintPath>B:\source\repos\ShitSID\C64Util\bin\Debug\net9.0-windows\C64Util.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\C64Util\C64Util.csproj" />
   </ItemGroup>
 
   <ItemGroup>
