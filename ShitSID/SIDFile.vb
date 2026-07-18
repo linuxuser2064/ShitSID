@@ -45,12 +45,12 @@ Public Class SidFile
         Dim artistName = Text.Encoding.ASCII.GetString(raw.AsSpan(54, 32)).Trim(vbNullChar)
         Dim studioName = Text.Encoding.ASCII.GetString(raw.AsSpan(86, 32)).Trim(vbNullChar)
         ' Additional fields based on PSIDv2 header
-        Dim flags = BinaryPrimitives.ReadUInt32BigEndian(raw.AsSpan(76, 4)) ' Big endian: bytes 76 to 79
-        Dim flagBits As New BitArray({raw(76), raw(77), raw(78), raw(79)})
-        Dim startPage = raw(78)
-        Dim pageLength = raw(79)
-        Dim secondSIDAddress = raw(80)
-        Dim thirdSIDAddress = raw(81)
+        Dim flags = BinaryPrimitives.ReadUInt16BigEndian(raw.AsSpan(&H76, 2)) ' Big endian: bytes 76 to 79
+        Dim flagBits As New BitArray({raw(&H76), raw(&H77)})
+        Dim startPage = raw(&H78)
+        Dim pageLength = raw(&H79)
+        Dim secondSIDAddress = raw(&H7A)
+        Dim thirdSIDAddress = raw(&H7B)
 
         ' Extract program data (starts from dataOffset)
         Dim programData = raw.Skip(dataOffset).ToArray()

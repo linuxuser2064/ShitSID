@@ -27,6 +27,7 @@ Partial Class AudioOutputSettings
         ComboBox1 = New ComboBox()
         CheckBox1 = New CheckBox()
         CheckBox2 = New CheckBox()
+        Label1 = New Label()
         SuspendLayout()
         ' 
         ' Label3
@@ -76,18 +77,28 @@ Partial Class AudioOutputSettings
         CheckBox2.Text = "Enable improved filter emulation" & vbCrLf & "(needs restart to take effect)"
         CheckBox2.UseVisualStyleBackColor = True
         ' 
+        ' Label1
+        ' 
+        Label1.AutoSize = True
+        Label1.Location = New Point(213, 10)
+        Label1.Name = "Label1"
+        Label1.Size = New Size(21, 15)
+        Label1.TabIndex = 21
+        Label1.Text = "Hz"
+        ' 
         ' AudioOutputSettings
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(319, 135)
+        Controls.Add(Label1)
         Controls.Add(CheckBox2)
         Controls.Add(CheckBox1)
         Controls.Add(Label3)
         Controls.Add(ComboBox1)
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
         Name = "AudioOutputSettings"
-        Text = "Audio output settings"
+        Text = "ShitSID settings"
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -96,4 +107,5 @@ Partial Class AudioOutputSettings
     Friend WithEvents ComboBox1 As ComboBox
     Friend WithEvents CheckBox1 As CheckBox
     Friend WithEvents CheckBox2 As CheckBox
+    Friend WithEvents Label1 As Label
 End Class

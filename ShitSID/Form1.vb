@@ -48,8 +48,19 @@ Public Class Form1
         If Not LoadCSV Then
             mem(1) = &H37
             sidfile = SidFile.Load(OpenFileDialog1.FileName)
-            If sidfile.FlagBits(2) = False AndAlso sidfile.FlagBits(3) = True Then
+            If sidfile.FlagBits(15 - 2) = False AndAlso sidfile.FlagBits(15 - 3) = True Then
                 mem(&H2A6) = 1 ' PAL
+                CheckBox5.Checked = False
+                'NumericUpDown6.Value = 50
+            ElseIf sidfile.FlagBits(15 - 2) = True AndAlso sidfile.FlagBits(15 - 3) = False Then
+                CheckBox5.Checked = True
+            End If
+
+            If sidfile.FlagBits(15 - 4) = False AndAlso sidfile.FlagBits(15 - 5) = True Then
+                ' 6581
+                CheckBox6.Checked = True
+            ElseIf sidfile.FlagBits(15 - 4) = True AndAlso sidfile.FlagBits(15 - 5) = False Then
+                CheckBox6.Checked = False
             End If
 
             ' Set song number from UI or default
@@ -111,8 +122,10 @@ Public Class Form1
         provider.PSGViewDivider = PSGViewDividerBox.Value
         provider.TickRate = NumericUpDown6.Value
         provider.UseNTSC = CheckBox5.Checked
-        PSGViewForm.Show()
-        PSGViewFormHandle = PSGViewForm.Handle
+        If PSGViewEnableBox.Checked Then
+            PSGViewForm.Show()
+            PSGViewFormHandle = PSGViewForm.Handle
+        End If
     End Sub
     Public Sub PlaySID()
         waveOut = New WasapiOut(AudioClientShareMode.Shared, True, 4)
@@ -421,6 +434,13 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
 
     Private Sub PSGViewEnableBox_CheckedChanged(sender As Object, e As EventArgs) Handles PSGViewEnableBox.CheckedChanged
         If provider Is Nothing Then Exit Sub
-        provider.EnablePSGView = PSGViewEnableBox.Checked
+        If PSGViewEnableBox.Checked Then
+            PSGViewForm.Show()
+            PSGViewFormHandle = PSGViewForm.Handle
+            provider.EnablePSGView = PSGViewEnableBox.Checked
+        Else
+            provider.EnablePSGView = PSGViewEnableBox.Checked
+            PSGViewForm.Hide()
+        End If
     End Sub
 End Class

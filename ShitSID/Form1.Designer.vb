@@ -214,7 +214,7 @@ Partial Class Form1
         ' 
         CheckBox5.AutoSize = True
         CheckBox5.FlatStyle = FlatStyle.System
-        CheckBox5.Location = New Point(157, 213)
+        CheckBox5.Location = New Point(9, 256)
         CheckBox5.Margin = New Padding(3, 2, 3, 2)
         CheckBox5.Name = "CheckBox5"
         CheckBox5.Size = New Size(96, 20)
@@ -241,7 +241,7 @@ Partial Class Form1
         GroupBox1.Margin = New Padding(3, 2, 3, 2)
         GroupBox1.Name = "GroupBox1"
         GroupBox1.Padding = New Padding(3, 2, 3, 2)
-        GroupBox1.Size = New Size(238, 177)
+        GroupBox1.Size = New Size(238, 184)
         GroupBox1.TabIndex = 12
         GroupBox1.TabStop = False
         GroupBox1.Text = "Filter controls"
@@ -249,7 +249,7 @@ Partial Class Form1
         ' Button7
         ' 
         Button7.FlatStyle = FlatStyle.System
-        Button7.Location = New Point(156, 148)
+        Button7.Location = New Point(157, 154)
         Button7.Name = "Button7"
         Button7.Size = New Size(75, 23)
         Button7.TabIndex = 13
@@ -261,7 +261,7 @@ Partial Class Form1
         RadioButton5.AutoSize = True
         RadioButton5.Enabled = False
         RadioButton5.FlatStyle = FlatStyle.System
-        RadioButton5.Location = New Point(5, 152)
+        RadioButton5.Location = New Point(6, 159)
         RadioButton5.Name = "RadioButton5"
         RadioButton5.Size = New Size(122, 20)
         RadioButton5.TabIndex = 12
@@ -274,7 +274,7 @@ Partial Class Form1
         RadioButton4.Checked = True
         RadioButton4.Enabled = False
         RadioButton4.FlatStyle = FlatStyle.System
-        RadioButton4.Location = New Point(5, 133)
+        RadioButton4.Location = New Point(6, 137)
         RadioButton4.Name = "RadioButton4"
         RadioButton4.Size = New Size(133, 20)
         RadioButton4.TabIndex = 11
@@ -287,7 +287,7 @@ Partial Class Form1
         RadioButton3.AutoSize = True
         RadioButton3.Enabled = False
         RadioButton3.FlatStyle = FlatStyle.System
-        RadioButton3.Location = New Point(5, 114)
+        RadioButton3.Location = New Point(6, 115)
         RadioButton3.Name = "RadioButton3"
         RadioButton3.Size = New Size(114, 20)
         RadioButton3.TabIndex = 10
@@ -397,9 +397,9 @@ Partial Class Form1
         GroupBox2.Controls.Add(RadioButton2)
         GroupBox2.Controls.Add(RadioButton1)
         GroupBox2.FlatStyle = FlatStyle.System
-        GroupBox2.Location = New Point(159, 98)
+        GroupBox2.Location = New Point(136, 98)
         GroupBox2.Name = "GroupBox2"
-        GroupBox2.Size = New Size(112, 64)
+        GroupBox2.Size = New Size(135, 64)
         GroupBox2.TabIndex = 13
         GroupBox2.TabStop = False
         GroupBox2.Text = "Master volume"
@@ -407,24 +407,24 @@ Partial Class Form1
         ' RadioButton2
         ' 
         RadioButton2.AutoSize = True
+        RadioButton2.Checked = True
         RadioButton2.FlatStyle = FlatStyle.System
         RadioButton2.Location = New Point(6, 39)
         RadioButton2.Name = "RadioButton2"
         RadioButton2.Size = New Size(105, 20)
         RadioButton2.TabIndex = 1
+        RadioButton2.TabStop = True
         RadioButton2.Text = "Volume mode"
         RadioButton2.UseVisualStyleBackColor = True
         ' 
         ' RadioButton1
         ' 
         RadioButton1.AutoSize = True
-        RadioButton1.Checked = True
         RadioButton1.FlatStyle = FlatStyle.System
         RadioButton1.Location = New Point(6, 17)
         RadioButton1.Name = "RadioButton1"
         RadioButton1.Size = New Size(104, 20)
         RadioButton1.TabIndex = 0
-        RadioButton1.TabStop = True
         RadioButton1.Text = "Sample mode"
         RadioButton1.UseVisualStyleBackColor = True
         ' 
@@ -432,7 +432,7 @@ Partial Class Form1
         ' 
         Button4.Enabled = False
         Button4.FlatStyle = FlatStyle.System
-        Button4.Location = New Point(370, 248)
+        Button4.Location = New Point(370, 259)
         Button4.Name = "Button4"
         Button4.Size = New Size(51, 23)
         Button4.TabIndex = 14
@@ -442,7 +442,7 @@ Partial Class Form1
         ' Button5
         ' 
         Button5.FlatStyle = FlatStyle.System
-        Button5.Location = New Point(424, 248)
+        Button5.Location = New Point(424, 259)
         Button5.Name = "Button5"
         Button5.Size = New Size(91, 23)
         Button5.TabIndex = 17
@@ -455,7 +455,7 @@ Partial Class Form1
         GroupBox3.Controls.Add(Label3)
         GroupBox3.Controls.Add(Button6)
         GroupBox3.FlatStyle = FlatStyle.System
-        GroupBox3.Location = New Point(277, 188)
+        GroupBox3.Location = New Point(277, 198)
         GroupBox3.Name = "GroupBox3"
         GroupBox3.Size = New Size(238, 54)
         GroupBox3.TabIndex = 18
@@ -514,14 +514,14 @@ Partial Class Form1
         GroupBox4.FlatStyle = FlatStyle.System
         GroupBox4.Location = New Point(6, 98)
         GroupBox4.Name = "GroupBox4"
-        GroupBox4.Size = New Size(144, 111)
+        GroupBox4.Size = New Size(124, 111)
         GroupBox4.TabIndex = 20
         GroupBox4.TabStop = False
         GroupBox4.Text = "Channels"
         ' 
         ' NumericUpDown6
         ' 
-        NumericUpDown6.Location = New Point(157, 183)
+        NumericUpDown6.Location = New Point(9, 230)
         NumericUpDown6.Maximum = New Decimal(New Integer() {960, 0, 0, 0})
         NumericUpDown6.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
         NumericUpDown6.Name = "NumericUpDown6"
@@ -533,7 +533,7 @@ Partial Class Form1
         ' 
         Label7.AutoSize = True
         Label7.FlatStyle = FlatStyle.System
-        Label7.Location = New Point(160, 165)
+        Label7.Location = New Point(12, 212)
         Label7.Name = "Label7"
         Label7.Size = New Size(55, 15)
         Label7.TabIndex = 21
@@ -542,7 +542,7 @@ Partial Class Form1
         ' Label8
         ' 
         Label8.AutoSize = True
-        Label8.Location = New Point(253, 187)
+        Label8.Location = New Point(103, 233)
         Label8.Name = "Label8"
         Label8.Size = New Size(21, 15)
         Label8.TabIndex = 22
@@ -570,9 +570,9 @@ Partial Class Form1
         GroupBox5.Controls.Add(PSGViewEnableBox)
         GroupBox5.Controls.Add(PSGViewVolumeGraphBox)
         GroupBox5.FlatStyle = FlatStyle.System
-        GroupBox5.Location = New Point(6, 212)
+        GroupBox5.Location = New Point(136, 168)
         GroupBox5.Name = "GroupBox5"
-        GroupBox5.Size = New Size(144, 85)
+        GroupBox5.Size = New Size(135, 85)
         GroupBox5.TabIndex = 23
         GroupBox5.TabStop = False
         GroupBox5.Text = "PSG View"
@@ -583,7 +583,7 @@ Partial Class Form1
         PSGViewDividerBox.Maximum = New Decimal(New Integer() {128, 0, 0, 0})
         PSGViewDividerBox.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
         PSGViewDividerBox.Name = "PSGViewDividerBox"
-        PSGViewDividerBox.Size = New Size(79, 23)
+        PSGViewDividerBox.Size = New Size(70, 23)
         PSGViewDividerBox.TabIndex = 16
         PSGViewDividerBox.Value = New Decimal(New Integer() {1, 0, 0, 0})
         ' 
@@ -612,20 +612,20 @@ Partial Class Form1
         ' TrackBar1
         ' 
         TrackBar1.LargeChange = 20
-        TrackBar1.Location = New Point(260, 244)
+        TrackBar1.Location = New Point(260, 255)
         TrackBar1.Maximum = 100
         TrackBar1.Name = "TrackBar1"
         TrackBar1.Size = New Size(104, 45)
         TrackBar1.SmallChange = 5
         TrackBar1.TabIndex = 24
         TrackBar1.TickFrequency = 10
-        TrackBar1.Value = 100
+        TrackBar1.Value = 50
         ' 
         ' Label9
         ' 
         Label9.AutoSize = True
         Label9.FlatStyle = FlatStyle.System
-        Label9.Location = New Point(166, 250)
+        Label9.Location = New Point(166, 261)
         Label9.Name = "Label9"
         Label9.Size = New Size(91, 15)
         Label9.TabIndex = 25
@@ -635,7 +635,7 @@ Partial Class Form1
         ' 
         CheckBox10.AutoSize = True
         CheckBox10.FlatStyle = FlatStyle.System
-        CheckBox10.Location = New Point(156, 277)
+        CheckBox10.Location = New Point(156, 284)
         CheckBox10.Name = "CheckBox10"
         CheckBox10.Size = New Size(388, 20)
         CheckBox10.TabIndex = 26
@@ -646,7 +646,7 @@ Partial Class Form1
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(520, 301)
+        ClientSize = New Size(520, 287)
         Controls.Add(CheckBox10)
         Controls.Add(Label9)
         Controls.Add(TrackBar1)

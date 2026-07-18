@@ -1,5 +1,6 @@
 ﻿Imports System.Reflection.Emit
 Imports System.Threading
+Imports System.Windows.Forms.AxHost
 Imports Highbyte.DotNet6502
 Imports Highbyte.DotNet6502.Instructions
 Imports Highbyte.DotNet6502.Systems.Commodore64.TimerAndPeripheral
@@ -158,7 +159,20 @@ Public Class SidAudioProvider
             'Thread.Sleep(1)
         End While
         'cpu.ExecuteUntilBRK(mem)
-        Const driverAddress As UShort = &HFFF0
+
+        Dim SidDataEnd As UShort = sidfile.LoadAddress + sidfile.Data.Length
+
+
+        If sidfile.StartPage = 255 Then
+            ' cooked
+            SidDataEnd = &HFFF0
+        ElseIf sidfile.StartPage > 0 Then
+            ' between 1 and 254
+            SidDataEnd = (sidfile.StartPage * 256) + (sidfile.PageLength * 256)
+        End If
+        System.Console.WriteLine($"SID data region end: {SidDataEnd:X4}")
+        'Const driverAddress As UShort = &HFFF0
+        Dim driverAddress = SidDataEnd
         mem.MapROM(driverAddress, {&H4C, driverAddress.Lowbyte, driverAddress.Highbyte})
         mem(driverAddress) = &H4C
         mem(driverAddress + 1) = driverAddress.Lowbyte
@@ -223,6 +237,7 @@ Public Class SidAudioProvider
                     sidPhase -= 1
                     cycleDelay += 1
                     sid.Clock()
+                    CycleCounter += 1
                 Else
                     If runCPU Then
                         Dim state = cpu.ExecuteOneInstruction(mem)
