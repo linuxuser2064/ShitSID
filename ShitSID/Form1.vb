@@ -203,8 +203,8 @@ Amount of songs: {newSidfile.Songs}, default song: {newSidfile.StartSong}")
             Else
                 NumericUpDown6.Value = 50
             End If
-            provider.TickRate = NumericUpDown6.Value
-            provider.UseNTSC = CheckBox5.Checked
+            If provider IsNot Nothing Then provider.TickRate = NumericUpDown6.Value
+            If provider IsNot Nothing Then provider.UseNTSC = CheckBox5.Checked
         End If
     End Sub
 
