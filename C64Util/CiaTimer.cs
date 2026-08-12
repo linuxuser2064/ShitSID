@@ -82,7 +82,7 @@ public class CiaTimer
             else
                 InternalTimer = 0;
 
-            if (InternalTimer == 0)
+            if (InternalTimer <= 1) // fuck kinda bugfix is this
                 _ciaIRQ.ConditionSet(_iRQSource);
 
             if (_ciaIRQ.IsConditionSet(_iRQSource))

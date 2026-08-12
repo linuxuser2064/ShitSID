@@ -1,4 +1,5 @@
 ﻿Imports System.Reflection.Emit
+Imports System.Reflection.Metadata.Ecma335
 Imports System.Threading
 Imports System.Windows.Forms.AxHost
 Imports Highbyte.DotNet6502
@@ -25,6 +26,8 @@ Public Class SidAudioProvider
     Private Const SID_CLOCK_RATE_PAL As Long = 985248 ' PAL clock in Hz
     Private SIDClockRate As Long = SID_CLOCK_RATE_PAL
     Dim cpuClockPhase As Long = 1
+    Dim interruptAck As Boolean = True
+    Dim runRasterInterrupt As Boolean = True
     Dim playAddr As UShort
     Dim CIA1 As Cia1
     Dim CIA2 As Cia2
@@ -108,7 +111,7 @@ Public Class SidAudioProvider
         End If
         Static LastSP = 0
         If LastSP <> cpu.SP Then
-            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}]")
+            System.Console.Write($"[SP {cpu.SP} PC {cpu.PC:X4}] ")
         End If
         System.Console.WriteLine($"PC: {cpu.PC:X4} A:{cpu.A:X2} X:{cpu.X:X2} Y:{cpu.Y:X2} {CType(state.LastInstructionExecResult.OpCodeByte, OpCodeId)} {out}")
         LastSP = cpu.SP
@@ -116,6 +119,9 @@ Public Class SidAudioProvider
     Public Sub InitSIDFile()
         If ReadCSVDump Then Exit Sub
         'mem.MapRAM(sidfile.LoadAddress, sidfile.Data)
+        For i = 0 To 65535
+            mem(i) = 0
+        Next
         For i = sidfile.LoadAddress To sidfile.LoadAddress + sidfile.Data.Length - 1
             mem(i) = sidfile.Data(i - sidfile.LoadAddress)
         Next
@@ -141,24 +147,25 @@ Public Class SidAudioProvider
         mem.MapReader(54300, Function(addr As UShort)
                                  Return sid.Voices(2).Envelope.Output
                              End Function)
+        ' hack to make arkanoid work
+        'mem.MapReader(&HDC00, Function(addr) &H7F)
+        'mem.MapReader(&HDC01, Function(addr) &H7F)
+        mem.MapWriter(&HD019, Sub(addr, value)
+                                  interruptAck = True
+                              End Sub)
+        mem.MapWriter(&HD01A, Sub(addr, value)
+                                  runRasterInterrupt = If(value And 1 = 1, True, False)
+                                  System.Console.WriteLine($"[D01A] Write {value:X2}, now {runRasterInterrupt}")
+                              End Sub)
         Dim factory = LoggerFactory.Create(Function(builder)
                                                Return builder.SetMinimumLevel(LogLevel.Debug).AddConsole
                                            End Function)
         CIA2 = New Cia2(cpu, factory)
         CIA2.MapIOLocations(mem)
-        'CIA1 = New Cia1(cpu, factory)
-        'CIA1.MapIOLocations(mem)
-        While True ' nuclear while
-            Dim state = cpu.ExecuteOneInstruction(mem)
-            CIA2.ProcessTimers(state.CyclesConsumed)
-            'CIA1.ProcessTimers(state.CyclesConsumed)
-            DisAsmState(state)
-            'If state.LastInstructionExecResult.OpCodeByte = &H60 Then Exit While
-            'If state.LastInstructionExecResult.OpCodeByte = &H40 Then Exit While
-            If state.LastInstructionExecResult.OpCodeByte = &H0 Then Exit While
-            'Thread.Sleep(1)
-        End While
-        'cpu.ExecuteUntilBRK(mem)
+        CIA1 = New Cia1(cpu, factory)
+        CIA1.MapIOLocations(mem)
+
+        ' 1. Capture the initial stack pointer before execution begins
 
         Dim SidDataEnd As UShort = sidfile.LoadAddress + sidfile.Data.Length
 
@@ -177,6 +184,23 @@ Public Class SidAudioProvider
         mem(driverAddress) = &H4C
         mem(driverAddress + 1) = driverAddress.Lowbyte
         mem(driverAddress + 2) = driverAddress.Highbyte
+        cpu.SP = 255
+        Dim initialSP As Byte = cpu.SP
+        cpu.PushWordToStack(0, mem) ' fake jsr
+        While True ' main execution loop
+            Dim state = cpu.ExecuteOneInstruction(mem)
+            CIA2.ProcessTimers(state.CyclesConsumed)
+            For cyc = CULng(1) To state.CyclesConsumed
+                sid.Clock()
+            Next
+            DisAsmState(state)
+
+            ' 2. Exit when the CPU returns to the main level (stack pointer restored)
+            If cpu.SP >= initialSP Then
+                Exit While
+            End If
+            Application.DoEvents()
+        End While        'cpu.ExecuteUntilBRK(mem)
         If sidfile.PlayAddress = 0 Then ' RSID mode activate
             playAddr = BitConverter.ToUInt16({mem(788), mem(789)}) ' kernal IRQ vector (rarely used)
             If playAddr = 0 Then
@@ -195,7 +219,7 @@ Public Class SidAudioProvider
         System.Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
         System.Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
         cpuClockPhase = 0 ' sampleRate \ TickRate - 1
-        cpu.PC = &H0
+        'cpu.PC = &H0
     End Sub
     Public Function Read(buffer() As Single, offset As Integer, count As Integer) As Integer Implements ISampleProvider.Read
         Dim phaseIncrement As Double = SIDClockRate / sampleRate
@@ -210,7 +234,12 @@ Public Class SidAudioProvider
             If Not ReadCSVDump Then
                 cpuClockPhase += 1
 
-                If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso cpu.CPUInterrupts.ActiveNMISources.Count = 0 Then ' 1 frame
+                If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso
+                    cpu.CPUInterrupts.ActiveNMISources.Count = 0 AndAlso runRasterInterrupt AndAlso
+                    interruptAck Then ' 1 frame
+
+                    System.Console.WriteLine("----- RASTER INTERRUPT -----")
+                    'System.Console.ReadKey()
                     cpu.CPUInterrupts.SetIRQSourceActive("raster", True)
                     cpu.PC = playAddr
                     cpuClockPhase -= (sampleRate \ TickRate)
@@ -241,7 +270,7 @@ Public Class SidAudioProvider
                 Else
                     If runCPU Then
                         Dim state = cpu.ExecuteOneInstruction(mem)
-                        'DisAsmState(state, True)
+                        'DisAsmState(state, False)
                         sidPhase -= state.CyclesConsumed
                         CycleCounter += state.CyclesConsumed
                         ' Clock the SID for each CPU cycle
@@ -249,7 +278,11 @@ Public Class SidAudioProvider
                             sid.Clock()
                         Next
                         CIA2.ProcessTimers(state.CyclesConsumed)
-                        'CIA1.ProcessTimers(state.CyclesConsumed)
+                        CIA1.ProcessTimers(state.CyclesConsumed)
+                        Dim rasterline As Integer = (CycleCounter Mod 20000) / 64.1025641025641
+                        mem(&HD012) = rasterline And 255
+                        mem(&HD011) = (rasterline And 256) >> 1
+                        'System.Console.WriteLine($"Rasterline {rasterline}, d012 {rasterline And 255}, d011 {(rasterline And 256) >> 1}")
                     Else
                         ' If CPU not running, just clock SID
                         sid.Clock()
