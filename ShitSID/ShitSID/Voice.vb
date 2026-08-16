@@ -121,7 +121,8 @@
             End If
         End If
         ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
-        wave = (dacInput / &HFFF) * 2.0 - 1.0
+        'wave = (dacInput / &HFFF) * 2.0 - 1.0
+        wave = (dacInput / &HFFF) * 1.275 - 0.275 ' cursed
         If noWaveform Then
             wave = lastOutput
         End If

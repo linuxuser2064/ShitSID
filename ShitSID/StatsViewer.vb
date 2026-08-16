@@ -2,6 +2,7 @@
 Imports System.Reflection
 
 Public Class StatsViewer
+
     Function GetVariable(instance As Object, variableName As String) As Object
         Dim prop As PropertyInfo = instance.GetType().GetProperty(variableName)
         If prop IsNot Nothing Then
@@ -15,15 +16,16 @@ Public Class StatsViewer
 
         Return Nothing ' Variable not found
     End Function
-    Function GetVariableType(instance As Object, variableName As String) As Object
+
+    Function GetVariableType(instance As Object, variableName As String) As Type
         Dim prop As PropertyInfo = instance.GetType().GetProperty(variableName)
         If prop IsNot Nothing Then
-            Return prop.GetValue(instance)
+            Return prop.PropertyType
         End If
 
         Dim field As FieldInfo = instance.GetType().GetField(variableName)
         If field IsNot Nothing Then
-            Return field.GetValue(instance)
+            Return field.FieldType
         End If
 
         Return Nothing ' Variable not found
@@ -44,23 +46,30 @@ Public Class StatsViewer
             field.SetValue(instance, convertedValue)
         End If
     End Sub
+
     Function GetAllVariableNames(instance As Object) As List(Of String)
         Dim names As New List(Of String)()
+        Dim targetType As Type = instance.GetType()
 
-        ' Get all public properties
-        Dim properties As PropertyInfo() = instance.GetType().GetProperties()
+        ' Get all public properties, skipping those with HideInStatsAttribute
+        Dim properties As PropertyInfo() = targetType.GetProperties()
         For Each prop In properties
-            names.Add(prop.Name)
+            If Not Attribute.IsDefined(prop, GetType(HideInStatsAttribute)) Then
+                names.Add(prop.Name)
+            End If
         Next
 
-        ' Get all public fields
-        Dim fields As FieldInfo() = instance.GetType().GetFields()
+        ' Get all public fields, skipping those with HideInStatsAttribute
+        Dim fields As FieldInfo() = targetType.GetFields()
         For Each field In fields
-            names.Add(field.Name)
+            If Not Attribute.IsDefined(field, GetType(HideInStatsAttribute)) Then
+                names.Add(field.Name)
+            End If
         Next
 
         Return names
     End Function
+
     Function ConvertStringToType(value As String, targetType As Type) As Object
         Try
             Dim converter As TypeConverter = TypeDescriptor.GetConverter(targetType)
@@ -74,7 +83,7 @@ Public Class StatsViewer
     End Function
 
     Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles Timer1.Tick
-        'GLOBAL
+        ' GLOBAL
         Dim outG = ""
         For Each x As String In GetAllVariableNames(Form1.sid)
             outG += $"{x.PadRight(20)} = {GetVariable(Form1.sid, x)}" & vbCrLf
@@ -102,4 +111,11 @@ Public Class StatsViewer
         Next
         Label4.Text = out3
     End Sub
+
+End Class
+
+' Attribute usable on both Properties and Fields
+<AttributeUsage(AttributeTargets.Property Or AttributeTargets.Field)>
+Public Class HideInStatsAttribute
+    Inherits Attribute
 End Class

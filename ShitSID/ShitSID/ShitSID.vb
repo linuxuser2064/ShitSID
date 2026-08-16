@@ -4,6 +4,7 @@
         Average
         Bright
     End Enum
+    <HideInStats>
     Public Voices(2) As Voice
 
     Public SampleRate As Int32 = 44100
@@ -31,6 +32,7 @@
 
     Const ClocksPerFrame = 985248.0
 
+    <HideInStats>
     Dim SIDRegisters(31) As Byte
     Public Sub New(Optional samplerate As Int32 = 44100)
         Me.SampleRate = samplerate
@@ -124,9 +126,9 @@
         If Not MuteSamples Then
             If Not VolumeSampleMode Then
                 output *= VolumeRegister / 15.0
-                output += (VolumeRegister - 15) / 6
+                output += (VolumeRegister - 15) / 8
             Else
-                output += (VolumeRegister - 15) / 6
+                output += (VolumeRegister - 15) / 9
             End If
         End If
         output /= 4

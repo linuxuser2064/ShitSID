@@ -27,7 +27,7 @@ Public Class SidAudioProvider
     Private SIDClockRate As Long = SID_CLOCK_RATE_PAL
     Dim cpuClockPhase As Long = 1
     Dim interruptAck As Boolean = True
-    Dim runRasterInterrupt As Boolean = True
+    Dim runRasterInterrupt As Boolean = False
     Dim playAddr As UShort
     Dim CIA1 As Cia1
     Dim CIA2 As Cia2
@@ -86,8 +86,19 @@ Public Class SidAudioProvider
         reader = traceReader
         ReadCSVDump = True
     End Sub
+    Public Sub Log(str As String)
+        System.Console.WriteLine(str)
+        'IO.File.AppendAllText("ins_log.txt", str & vbCrLf)
+    End Sub
+    Public Sub LogS(str As String)
+        System.Console.Write(str)
+        'IO.File.AppendAllText("ins_log.txt", str)
+    End Sub
     Public Sub DisAsmState(state As ExecState, Optional wait As Boolean = False)
-        If cpu.PC = &H0 Then Exit Sub
+        If cpu.PC = &H0 Then
+            System.Console.ReadKey()
+            'Exit Sub
+        End If
         If wait Then Thread.Sleep(1)
         Dim size = cpu.GetInstructionSize(mem, state.PCBeforeLastOpCodeExecuted)
         Dim out = ""
@@ -97,26 +108,29 @@ Public Class SidAudioProvider
         Next
         If state.LastInstructionExecResult.OpCodeByte = OpCodeId.PHA Or
             state.LastInstructionExecResult.OpCodeByte = OpCodeId.PHP Then
-            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}] Pushed {cpu.A:X2} to stack")
+            Log($"[SP {cpu.SP} PC {cpu.PC:X4}] Pushed {cpu.A:X2} to stack")
             Exit Sub
         End If
         If state.LastInstructionExecResult.OpCodeByte = OpCodeId.PLA Or
             state.LastInstructionExecResult.OpCodeByte = OpCodeId.PLP Then
-            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}] Pulled {cpu.A:X2} from stack")
+            Log($"[SP {cpu.SP} PC {cpu.PC:X4}] Pulled {cpu.A:X2} from stack")
             Exit Sub
         End If
         If state.LastInstructionExecResult.OpCodeByte = OpCodeId.TXS Then
-            System.Console.WriteLine($"[SP {cpu.SP} PC {cpu.PC:X4}] Transferred {cpu.X} to SP")
+            Log($"[SP {cpu.SP} PC {cpu.PC:X4}] Transferred {cpu.X} to SP")
             Exit Sub
         End If
         Static LastSP = 0
         If LastSP <> cpu.SP Then
-            System.Console.Write($"[SP {cpu.SP} PC {cpu.PC:X4}] ")
+            LogS($"[SP {cpu.SP} PC {cpu.PC:X4}] ")
         End If
-        System.Console.WriteLine($"PC: {cpu.PC:X4} A:{cpu.A:X2} X:{cpu.X:X2} Y:{cpu.Y:X2} {CType(state.LastInstructionExecResult.OpCodeByte, OpCodeId)} {out}")
+        Log($"PC: {cpu.PC:X4} A:{cpu.A:X2} X:{cpu.X:X2} Y:{cpu.Y:X2} {CType(state.LastInstructionExecResult.OpCodeByte, OpCodeId)} {out}")
         LastSP = cpu.SP
     End Sub
     Public Sub InitSIDFile()
+        'If IO.File.Exists("ins_log.txt") Then
+        '    IO.File.Delete("ins_log.txt")
+        'End If
         If ReadCSVDump Then Exit Sub
         'mem.MapRAM(sidfile.LoadAddress, sidfile.Data)
         For i = 0 To 65535
@@ -155,11 +169,11 @@ Public Class SidAudioProvider
                               End Sub)
         mem.MapWriter(&HD01A, Sub(addr, value)
                                   runRasterInterrupt = If(value And 1 = 1, True, False)
-                                  System.Console.WriteLine($"[D01A] Write {value:X2}, now {runRasterInterrupt}")
+                                  Log($"[D01A] Write {value:X2}, now {runRasterInterrupt}")
                               End Sub)
-        Dim factory = LoggerFactory.Create(Function(builder)
-                                               Return builder.SetMinimumLevel(LogLevel.Debug).AddConsole
-                                           End Function)
+        Dim factory = Microsoft.Extensions.Logging.LoggerFactory.Create(Function(builder)
+                                                                            Return builder.SetMinimumLevel(LogLevel.Debug).AddConsole
+                                                                        End Function)
         CIA2 = New Cia2(cpu, factory)
         CIA2.MapIOLocations(mem)
         CIA1 = New Cia1(cpu, factory)
@@ -177,7 +191,7 @@ Public Class SidAudioProvider
             ' between 1 and 254
             SidDataEnd = (sidfile.StartPage * 256) + (sidfile.PageLength * 256)
         End If
-        System.Console.WriteLine($"SID data region end: {SidDataEnd:X4}")
+        Log($"SID data region end: {SidDataEnd:X4}")
         'Const driverAddress As UShort = &HFFF0
         Dim driverAddress = SidDataEnd
         mem.MapROM(driverAddress, {&H4C, driverAddress.Lowbyte, driverAddress.Highbyte})
@@ -186,9 +200,10 @@ Public Class SidAudioProvider
         mem(driverAddress + 2) = driverAddress.Highbyte
         cpu.SP = 255
         Dim initialSP As Byte = cpu.SP
-        cpu.PushWordToStack(0, mem) ' fake jsr
+        cpu.PushWordToStack(driverAddress, mem) ' fake jsr
         While True ' main execution loop
             Dim state = cpu.ExecuteOneInstruction(mem)
+            CIA1.ProcessTimers(state.CyclesConsumed)
             CIA2.ProcessTimers(state.CyclesConsumed)
             For cyc = CULng(1) To state.CyclesConsumed
                 sid.Clock()
@@ -206,18 +221,19 @@ Public Class SidAudioProvider
             If playAddr = 0 Then
                 playAddr = BitConverter.ToUInt16({mem(65534), mem(65535)}) ' IRQ vector
             End If
-            MsgBox($"RSID detected, play address set to {playAddr}")
+            Log($"RSID detected, play address set to {playAddr}")
         Else
             playAddr = sidfile.PlayAddress
+            runRasterInterrupt = True
             'mem(65534) = playAddr And &HFF
             'mem(65535) = (playAddr And &HFF00) >> 8
         End If
         mem(65534) = &H0 ' fucking hack but it works anyway lol (will be removed)
         mem(65535) = &H0
-        System.Console.WriteLine($"Play address is {playAddr:X4}")
-        System.Console.WriteLine($"IRQ is {BitConverter.ToUInt16({mem(65534), mem(65535)})}")
-        System.Console.WriteLine($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
-        System.Console.WriteLine($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
+        Log($"Play address is {playAddr:X4}")
+        Log($"IRQ is {BitConverter.ToUInt16({mem(65534), mem(65535)})}")
+        Log($"NMI is {BitConverter.ToUInt16({mem(65530), mem(65531)})}")
+        Log($"Timer A every {BitConverter.ToUInt16({mem(56580), mem(56581)})} cycles")
         cpuClockPhase = 0 ' sampleRate \ TickRate - 1
         'cpu.PC = &H0
     End Sub
@@ -238,7 +254,7 @@ Public Class SidAudioProvider
                     cpu.CPUInterrupts.ActiveNMISources.Count = 0 AndAlso runRasterInterrupt AndAlso
                     interruptAck Then ' 1 frame
 
-                    System.Console.WriteLine("----- RASTER INTERRUPT -----")
+                    'System.Console.WriteLine("----- RASTER INTERRUPT -----")
                     'System.Console.ReadKey()
                     cpu.CPUInterrupts.SetIRQSourceActive("raster", True)
                     cpu.PC = playAddr
@@ -277,8 +293,8 @@ Public Class SidAudioProvider
                         For cyc = CULng(1) To state.CyclesConsumed
                             sid.Clock()
                         Next
-                        CIA2.ProcessTimers(state.CyclesConsumed)
                         CIA1.ProcessTimers(state.CyclesConsumed)
+                        CIA2.ProcessTimers(state.CyclesConsumed)
                         Dim rasterline As Integer = (CycleCounter Mod 20000) / 64.1025641025641
                         mem(&HD012) = rasterline And 255
                         mem(&HD011) = (rasterline And 256) >> 1
