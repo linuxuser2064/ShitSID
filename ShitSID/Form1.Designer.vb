@@ -22,7 +22,6 @@ Partial Class Form1
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
-        components = New ComponentModel.Container()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form1))
         Button1 = New Button()
         OpenFileDialog1 = New OpenFileDialog()
@@ -50,7 +49,6 @@ Partial Class Form1
         NumericUpDown4 = New NumericUpDown()
         Label4 = New Label()
         NumericUpDown3 = New NumericUpDown()
-        ClockTimer = New Timer(components)
         CPUWorker = New ComponentModel.BackgroundWorker()
         GroupBox2 = New GroupBox()
         RadioButton2 = New RadioButton()
@@ -102,7 +100,6 @@ Partial Class Form1
         ' 
         ' OpenFileDialog1
         ' 
-        OpenFileDialog1.FileName = "OpenFileDialog1"
         OpenFileDialog1.Filter = "SID files|*.SID|CSV dumps|*.csv|All files|*"
         ' 
         ' CheckBox1
@@ -159,7 +156,6 @@ Partial Class Form1
         ' 
         ' OpenFileDialog2
         ' 
-        OpenFileDialog2.FileName = "OpenFileDialog1"
         OpenFileDialog2.Filter = "SID files|*.SID|CSV dumps|*.csv|All files|*"
         ' 
         ' Button3
@@ -383,10 +379,6 @@ Partial Class Form1
         NumericUpDown3.Size = New Size(83, 23)
         NumericUpDown3.TabIndex = 2
         NumericUpDown3.Value = New Decimal(New Integer() {-805320246, 5059392, 0, 589824})
-        ' 
-        ' ClockTimer
-        ' 
-        ClockTimer.Interval = 1
         ' 
         ' CPUWorker
         ' 
@@ -714,7 +706,6 @@ Partial Class Form1
     Friend WithEvents Label4 As Label
     Friend WithEvents NumericUpDown3 As NumericUpDown
     Friend WithEvents CheckBox6 As CheckBox
-    Friend WithEvents ClockTimer As Timer
     Friend WithEvents CPUWorker As System.ComponentModel.BackgroundWorker
     Friend WithEvents CheckBox7 As CheckBox
     Friend WithEvents GroupBox2 As GroupBox

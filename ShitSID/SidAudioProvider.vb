@@ -156,7 +156,7 @@ Public Class SidAudioProvider
                                   End Sub)
         End If
         mem.MapReader(54299, Function(addr As UShort)
-                                 Return sid.Voices(2).GenerateNoEnvelope() * 127
+                                 Return ((sid.Voices(2).GenerateNoEnvelope() + 0.275) / 1.275) * 255.0
                              End Function)
         mem.MapReader(54300, Function(addr As UShort)
                                  Return sid.Voices(2).Envelope.Output
@@ -251,8 +251,9 @@ Public Class SidAudioProvider
                 cpuClockPhase += 1
 
                 If cpuClockPhase >= (sampleRate \ TickRate) - 1 AndAlso
-                    cpu.CPUInterrupts.ActiveNMISources.Count = 0 AndAlso runRasterInterrupt AndAlso
-                    interruptAck Then ' 1 frame
+                cpu.CPUInterrupts.ActiveNMISources.Count = 0 AndAlso
+                runRasterInterrupt AndAlso
+                interruptAck Then ' 1 frame
 
                     'System.Console.WriteLine("----- RASTER INTERRUPT -----")
                     'System.Console.ReadKey()

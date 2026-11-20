@@ -148,7 +148,6 @@ CommonFont, Brushes.White, cX(120), cY(44 + yOffset))
         g.DrawLine(ScrollbarTrackInnerPen, 43 + filled, 186, 43 + filled, 186 + 7)
         g.DrawString(Math.Floor(SID.GetCutoffHz), CommonFont, Brushes.White, cX(208), cY(186))
         g.DrawString("Hz", CommonFont, Brushes.White, cX(239), cY(186))
-        'g.DrawString(SID.Filter.fc, CommonFont, Brushes.White, cX(208), cY(186))
 
         g.FillRectangle(SectionLabelBrush, 0, 196, 38, 11)
         g.DrawString($"Global:", CommonFont, Brushes.White, cX(2), cY(198))

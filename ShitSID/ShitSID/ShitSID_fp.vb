@@ -163,12 +163,16 @@
             output += {FilterFP.Clock(generateds(0), generateds(1), generateds(2), 0) / (FilterMultiplier),
                 FilterFP.Clock(generateds(0), generateds(1), generateds(2), 0) / (FilterMultiplier)}.Average
         End If
+        Dim PCMAttenuation = 0.1875
+        If Voices(0).UseFilter Or Voices(1).UseFilter Or Voices(2).UseFilter Then
+            PCMAttenuation *= 0.275
+        End If
         If Not MuteSamples Then
             If Not VolumeSampleMode Then
                 output *= VolumeRegister / 15.0
-                output += (VolumeRegister - 15) / 6
+                output += (VolumeRegister - 15) * PCMAttenuation
             Else
-                output += (VolumeRegister - 15) / 4
+                output += (VolumeRegister - 15) * PCMAttenuation * 1.33
             End If
         End If
         output /= 4
