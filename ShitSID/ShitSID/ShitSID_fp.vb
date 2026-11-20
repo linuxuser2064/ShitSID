@@ -231,7 +231,7 @@
                 Return
         End Select
 
-        Dim reg = addr And &H1F
+        Dim reg = addr And &H1F ' bitwise AND
         Dim voiceNum = reg \ 7
         If voiceNum > 2 Then Return
         Dim voice = Voices(voiceNum)
@@ -249,25 +249,8 @@
                 voice.UpdateDutyCycle()
             Case 4 ' CONTROL REG
                 voice.Control = value
-                Dim bits As New BitArray({value})
                 voice.Envelope.WriteControlReg(value)
-                If bits(4) AndAlso bits(5) Then
-                    voice.Waveform = "tri+saw"
-                ElseIf bits(4) AndAlso bits(6) Then
-                    voice.Waveform = "tri+pulse"
-                ElseIf bits(5) AndAlso bits(6) Then
-                    voice.Waveform = "saw+pulse"
-                ElseIf bits(4) Then
-                    voice.Waveform = "tri"
-                ElseIf bits(5) Then
-                    voice.Waveform = "saw"
-                ElseIf bits(6) Then
-                    voice.Waveform = "pulse"
-                ElseIf bits(7) Then
-                    voice.Waveform = "noise"
-                Else
-                    voice.Waveform = "none" ' No audio
-                End If
+                voice.Waveform = (value And &HF0) >> 4
             Case 5 ' ATTACK/DECAY
                 voice.Envelope.WriteAttackDecay(value)
             Case 6 ' SUSTAIN/RELEASE

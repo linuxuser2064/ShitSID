@@ -1,11 +1,19 @@
 ﻿Public Class Voice
+    <Flags>
+    Public Enum EWaveform
+        None = 0
+        Triangle = 1
+        Sawtooth = 2
+        Pulse = 4
+        Noise = 8
+    End Enum
     Private lfsr As New SIDNoiseLFSR
     Public MuteVoice As Boolean = False
     Public LoFiDuty As Boolean = False
     Public FreqLo As Byte
     Public FreqHi As Byte
     Public Control As Byte
-    Public Waveform As String = "pulse"
+    Public Waveform As EWaveform = EWaveform.None
     Public DutyCycle As Double = 0.5
     Public PulseWidthLo As Byte = 0
     Public PulseWidthHi As Byte = 0
@@ -65,57 +73,61 @@
         Dim dacInput As Integer = 0
         Dim accumulated = (CUInt(FreqHi) << 8) Or CUInt(FreqLo)
         Dim noWaveform As Boolean = False
-        Select Case Waveform
-            Case "saw"
-                dacInput = sawVal
-            Case "tri"
-                dacInput = triVal
-            Case "pulse"
-                dacInput = pulseVal
-            Case "noise"
-                Dim noiseClock As Integer = (phase >> 19) And 1
 
-                If prevNoiseClock = 0 AndAlso noiseClock = 1 Then
-                    currentNoise = lfsr.Read(acc)
-                End If
+        If Waveform = EWaveform.Sawtooth Then
+            dacInput = sawVal
+        ElseIf Waveform = EWaveform.Triangle Then
+            dacInput = triVal
+        ElseIf waveform = EWaveform.Pulse Then
+            dacInput = pulseVal
+        ElseIf Waveform = EWaveform.Noise Then
+            Dim noiseClock As Integer = (phase >> 19) And 1
 
-                prevNoiseClock = noiseClock
+            If prevNoiseClock = 0 AndAlso noiseClock = 1 Then
+                currentNoise = lfsr.Read(acc)
+            End If
 
-                dacInput = currentNoise
-            Case "saw+tri"
-                If Parent.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) * 16)
-                End If
-            Case "tri+pulse"
-                If Parent.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) * 16)
-                End If
-            Case "saw+pulse"
-                If Parent.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) * 16)
-                End If
-            Case "saw+tri+pulse"
-                If Parent.Mode6581 Then
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
-                Else
-                    dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
-                End If
-            Case Else
-                noWaveform = True
-        End Select
+            prevNoiseClock = noiseClock
+
+            dacInput = currentNoise
+        ElseIf Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle) Then
+            If Parent.Mode6581 Then
+                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) << 4)
+            Else
+                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) << 4)
+            End If
+        ElseIf Waveform = (EWaveform.Triangle Or EWaveform.Pulse) Then
+            If Parent.Mode6581 Then
+                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) << 4)
+            Else
+                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) << 4)
+            End If
+        ElseIf Waveform = (EWaveform.Sawtooth Or EWaveform.Pulse) Then
+            If Parent.Mode6581 Then
+                dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) << 4)
+            Else
+                dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) << 4)
+            End If
+        ElseIf Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle Or EWaveform.Pulse) Then
+            If Parent.Mode6581 Then
+                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
+            Else
+                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
+            End If
+        Else
+            noWaveform = True
+        End If
         ' xor ringmod
-        If Waveform = "tri" AndAlso (Control And &H4) Then
+        If Waveform = EWaveform.Triangle AndAlso (Control And &H4) Then
             If sourceVoice.phase >= 8388608 Then
                 dacInput = 4095 - dacInput
             End If
         End If
-        If (Waveform = "saw+tri" Or Waveform = "tri+pulse" Or Waveform = "saw+pulse" Or Waveform = "saw+tri+pulse") AndAlso (Control And &H4) Then
+        If (Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle) Or
+            Waveform = (EWaveform.Triangle Or EWaveform.Pulse) Or
+            Waveform = (EWaveform.Sawtooth Or EWaveform.Pulse) Or
+            Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle Or EWaveform.Pulse)) AndAlso
+            (Control And &H4) Then
             If sourceVoice.phase >= 8388608 Then
                 dacInput = 0
             End If

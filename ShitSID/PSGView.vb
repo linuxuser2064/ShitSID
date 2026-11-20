@@ -39,10 +39,10 @@ Public Class PSGView
 
         g.DrawString("Wave:", CommonFont, Brushes.White, cX(2), cY(14 + yOffset))
         ' note to self why did i have to make it this fucking way
-        If SID.Voices(idx).Waveform.Contains("tri") Then g.FillRectangle(EnabledOptionBrush, 35, 13 + yOffset, 16, 9)
-        If SID.Voices(idx).Waveform.Contains("saw") Then g.FillRectangle(EnabledOptionBrush, 52, 13 + yOffset, 16, 9)
-        If SID.Voices(idx).Waveform.Contains("pulse") Then g.FillRectangle(EnabledOptionBrush, 69, 13 + yOffset, 16, 9)
-        If SID.Voices(idx).Waveform.Contains("noise") Then g.FillRectangle(EnabledOptionBrush, 86, 13 + yOffset, 16, 9)
+        If SID.Voices(idx).Waveform.HasFlag(Voice.EWaveform.Triangle) Then g.FillRectangle(EnabledOptionBrush, 35, 13 + yOffset, 16, 9)
+        If SID.Voices(idx).Waveform.HasFlag(Voice.EWaveform.Sawtooth) Then g.FillRectangle(EnabledOptionBrush, 52, 13 + yOffset, 16, 9)
+        If SID.Voices(idx).Waveform.HasFlag(Voice.EWaveform.Pulse) Then g.FillRectangle(EnabledOptionBrush, 69, 13 + yOffset, 16, 9)
+        If SID.Voices(idx).Waveform.HasFlag(Voice.EWaveform.Noise) Then g.FillRectangle(EnabledOptionBrush, 86, 13 + yOffset, 16, 9)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.waveform_tri, 36, 14 + yOffset)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.waveform_saw, 53, 14 + yOffset)
         g.DrawImageUnscaled(My.Resources.PSGViewResources.waveform_pulse, 70, 14 + yOffset)
@@ -161,10 +161,15 @@ CommonFont, Brushes.White, cX(120), cY(44 + yOffset))
 
         If ShowPCMGraph Then
             g.FillRectangle(BarBackgroundBrush, 0, 225, 256, 31)
-            For i = 0 To volbuf.Length - 1
-                Dim prev = 30 - volbuf(Math.Max(0, i - 1)) * 2
+            For i = 0 To volbuf.Length - 2
                 Dim current = 30 - volbuf(i) * 2
-                g.DrawLine(Pens.White, i + 1, 225 + current, i, 225 + prev)
+                Dim nextSample = 30 - volbuf(i + 1) * 2
+
+                ' Horizontal segment
+                g.DrawLine(Pens.White, i, 225 + current, i + 1, 225 + current)
+
+                ' Vertical transition
+                g.DrawLine(Pens.White, i + 1, 225 + current, i + 1, 225 + nextSample)
             Next
         End If
 
