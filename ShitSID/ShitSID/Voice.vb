@@ -18,13 +18,12 @@
     Public PulseWidthLo As Byte = 0
     Public PulseWidthHi As Byte = 0
     Public UseFilter As Boolean = False
-    Public Envelope As New EnvelopeGenerator()
+    Public Envelope As New EnvelopeGenerator
     Private prevNoiseClock As Integer
     Private currentNoise As Integer
     Private Index As Int32
     Private Parent As ShitSID
     Private phase As Int32 = 0 ' actually 24-bit
-    'Private lastTime As Double = 0.0
     Private prevMasterMSB As Boolean = False
     Private lastOutput As Double = 0
     ' 24-bit accumulator for SID-accurate phase timing
@@ -35,7 +34,7 @@
     Public Sub UpdateDutyCycle()
         If LoFiDuty Then
             ' 4 bit
-            DutyCycle = (CUInt(PulseWidthHi And &HF) << 8)
+            DutyCycle = (CUInt(PulseWidthHi And &HF) << 8) Or 128
         Else
             ' 12 bit
             DutyCycle = (CUInt(PulseWidthHi And &HF) << 8) Or PulseWidthLo
@@ -44,8 +43,7 @@
     Public Sub Clock()
         ' phase accumulator (16777215 max)
         Dim accumulated = (CUInt(FreqHi) << 8) Or CUInt(FreqLo)
-        phase += accumulated
-        phase = phase Mod 16777216
+        phase = (phase + accumulated) And &HFFFFFF
         If (Control And &H8) <> 0 Then ' test bit
             phase = 0
         End If

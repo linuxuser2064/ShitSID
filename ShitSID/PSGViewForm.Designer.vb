@@ -34,6 +34,7 @@ Partial Class PSGViewForm
         ForeColor = SystemColors.ControlText
         FormBorderStyle = FormBorderStyle.FixedSingle
         Icon = CType(resources.GetObject("$this.Icon"), Icon)
+        MaximizeBox = False
         Name = "PSGViewForm"
         Text = "PSG View"
         ResumeLayout(False)
