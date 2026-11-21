@@ -14,7 +14,7 @@
     Public FreqHi As Byte
     Public Control As Byte
     Public Waveform As EWaveform = EWaveform.None
-    Public DutyCycle As Double = 0.5
+    Public DutyCycle As UShort = 0 ' 0-4095
     Public PulseWidthLo As Byte = 0
     Public PulseWidthHi As Byte = 0
     Public UseFilter As Boolean = False
@@ -35,12 +35,10 @@
     Public Sub UpdateDutyCycle()
         If LoFiDuty Then
             ' 4 bit
-            Dim val4 = PulseWidthHi And &HF
-            DutyCycle = val4 / 15.0
+            DutyCycle = (CUInt(PulseWidthHi And &HF) << 8)
         Else
             ' 12 bit
-            Dim pulseVal = (CUInt(PulseWidthHi And &HF) << 8) Or PulseWidthLo
-            DutyCycle = Math.Max(0.0, Math.Min(1.0, pulseVal / 4095.0))
+            DutyCycle = (CUInt(PulseWidthHi And &HF) << 8) Or PulseWidthLo
         End If
     End Sub
     Public Sub Clock()
@@ -56,32 +54,36 @@
         Dim wave As Double = 0
 
         ' sync/ringmod stuff
-        Dim sourceIndex As Integer = (Me.Index + 2) Mod 3
+        Dim sourceIndex As Byte = (Me.Index + 2) Mod 3
         Dim sourceVoice = Me.Parent.Voices(sourceIndex)
 
 
         ' new 12 bit phase
-        Dim acc As Integer = (phase >> 12) And &HFFF
-        ' sid accurate waveform generation
-        Dim sawVal As Integer = acc
-        Dim triVal As Integer = (acc << 1) And &HFFF
-        If (acc And &H800) <> 0 Then ' MSB is bit 11
-            triVal = triVal Xor &HFFF
-        End If
-        Dim pulseVal As Integer = If(acc > DutyCycle * &HFFF, &HFFF, 0)
+        Dim acc As UShort = (phase >> 12) And &HFFF
 
-        Dim dacInput As Integer = 0
-        Dim accumulated = (CUInt(FreqHi) << 8) Or CUInt(FreqLo)
+        Dim masterPhaseMSB As Boolean = (sourceVoice.phase And &H800000) <> 0
+        If (Control And &H2) <> 0 Then
+            If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
+                Me.phase = 0
+            End If
+        End If
+        prevMasterMSB = masterPhaseMSB
+
+        ' sid accurate waveform generation
+        Dim dacInput As UShort = 0
         Dim noWaveform As Boolean = False
 
         If Waveform = EWaveform.Sawtooth Then
-            dacInput = sawVal
+            dacInput = acc
         ElseIf Waveform = EWaveform.Triangle Then
-            dacInput = triVal
+            dacInput = (acc << 1) And &HFFF
+            If (acc And &H800) <> 0 Then ' MSB is bit 11
+                dacInput = dacInput Xor &HFFF
+            End If
         ElseIf waveform = EWaveform.Pulse Then
-            dacInput = pulseVal
+            dacInput = If(acc > DutyCycle, &HFFF, 0)
         ElseIf Waveform = EWaveform.Noise Then
-            Dim noiseClock As Integer = (phase >> 19) And 1
+            Dim noiseClock As Byte = (phase >> 19) And 1
 
             If prevNoiseClock = 0 AndAlso noiseClock = 1 Then
                 currentNoise = lfsr.Read(acc)
@@ -92,60 +94,53 @@
             dacInput = currentNoise
         ElseIf Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle) Then
             If Parent.Mode6581 Then
-                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF6581(acc) << 4)
+                dacInput = If(acc < DutyCycle, 0, SawTriWF6581(acc) << 4)
             Else
-                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriWF8580(acc) << 4)
+                dacInput = If(acc < DutyCycle, 0, SawTriWF8580(acc) << 4)
             End If
         ElseIf Waveform = (EWaveform.Triangle Or EWaveform.Pulse) Then
             If Parent.Mode6581 Then
-                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF6581(acc) << 4)
+                dacInput = If(acc < DutyCycle, 0, TriPulseWF6581(acc) << 4)
             Else
-                dacInput = If(acc < DutyCycle * &HFFF, 0, TriPulseWF8580(acc) << 4)
+                dacInput = If(acc < DutyCycle, 0, TriPulseWF8580(acc) << 4)
             End If
         ElseIf Waveform = (EWaveform.Sawtooth Or EWaveform.Pulse) Then
             If Parent.Mode6581 Then
-                dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF6581(acc) << 4)
+                dacInput = If(acc < DutyCycle, 0, SawPulseWF6581(acc) << 4)
             Else
-                dacInput = If(acc < DutyCycle * &HFFF, 0, SawPulseWF8580(acc) << 4)
+                dacInput = If(acc < DutyCycle, 0, SawPulseWF8580(acc) << 4)
             End If
         ElseIf Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle Or EWaveform.Pulse) Then
             If Parent.Mode6581 Then
-                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF6581(acc) * 16)
+                dacInput = If(acc < DutyCycle, 0, SawTriPulseWF6581(acc) << 4)
             Else
-                dacInput = If(acc < DutyCycle * &HFFF, 0, SawTriPulseWF8580(acc) * 16)
+                dacInput = If(acc < DutyCycle, 0, SawTriPulseWF8580(acc) << 4)
             End If
         Else
             noWaveform = True
         End If
         ' xor ringmod
         If Waveform = EWaveform.Triangle AndAlso (Control And &H4) Then
-            If sourceVoice.phase >= 8388608 Then
+            If (sourceVoice.phase And &H800000) <> 0 Then
                 dacInput = 4095 - dacInput
             End If
         End If
-        If (Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle) Or
-            Waveform = (EWaveform.Triangle Or EWaveform.Pulse) Or
-            Waveform = (EWaveform.Sawtooth Or EWaveform.Pulse) Or
-            Waveform = (EWaveform.Sawtooth Or EWaveform.Triangle Or EWaveform.Pulse)) AndAlso
-            (Control And &H4) Then
-            If sourceVoice.phase >= 8388608 Then
-                dacInput = 0
-            End If
+
+        Dim w As Integer = CInt(Waveform)
+
+        If (w And 8) = 0 AndAlso (w And (w - 1)) <> 0 AndAlso
+           (Control And &H4) AndAlso
+           (sourceVoice.phase And &H800000) <> 0 Then
+
+            dacInput = 0
         End If
-        ' Normalize the 12-bit DAC value to -1.0 to 1.0 float
-        'wave = (dacInput / &HFFF) * 2.0 - 1.0
+
         wave = (dacInput / &HFFF) * 1.275 - 0.275 ' cursed
+
         If noWaveform Then
             wave = lastOutput
         End If
-        '  hardsync
-        Dim masterPhaseMSB As Boolean = (sourceVoice.phase >= 8388608)
-        If (Control And &H2) <> 0 Then
-            If (Not prevMasterMSB) AndAlso masterPhaseMSB Then
-                Me.phase = 0
-            End If
-        End If
-        prevMasterMSB = masterPhaseMSB
+
         lastOutput = wave
         Return wave
     End Function

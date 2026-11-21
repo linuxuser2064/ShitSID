@@ -164,7 +164,8 @@
                 FilterFP.Clock(generateds(0), generateds(1), generateds(2), 0) / (FilterMultiplier)}.Average
         End If
         Dim PCMAttenuation = 0.1875
-        If Voices(0).UseFilter Or Voices(1).UseFilter Or Voices(2).UseFilter Then
+        If (Voices(0).UseFilter Or Voices(1).UseFilter Or Voices(2).UseFilter) And
+            (Not (Voices(0).UseFilter And Voices(1).UseFilter And Voices(2).UseFilter)) Then
             PCMAttenuation *= 0.275
         End If
         If Not MuteSamples Then
@@ -176,7 +177,6 @@
             End If
         End If
         output /= 4
-        'output = output - (output * output) ' holy distortion
         If InternalAudioFilter Then
             Return LowPassSample(output, 20154, SampleRate)
         Else

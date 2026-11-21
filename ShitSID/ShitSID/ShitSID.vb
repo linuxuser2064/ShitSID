@@ -123,12 +123,17 @@
         If Not BypassFilter Then
             output += {Filter.ApplyFilter(filterInput), Filter.ApplyFilter(filterInput)}.Average
         End If
+        Dim PCMAttenuation = 0.1875
+        If (Voices(0).UseFilter Or Voices(1).UseFilter Or Voices(2).UseFilter) And
+            (Not (Voices(0).UseFilter And Voices(1).UseFilter And Voices(2).UseFilter)) Then
+            PCMAttenuation *= 0.275
+        End If
         If Not MuteSamples Then
             If Not VolumeSampleMode Then
                 output *= VolumeRegister / 15.0
-                output += (VolumeRegister - 15) / 8
+                output += (VolumeRegister - 15) * PCMAttenuation
             Else
-                output += (VolumeRegister - 15) / 9
+                output += (VolumeRegister - 15) * PCMAttenuation * 1.33
             End If
         End If
         output /= 4

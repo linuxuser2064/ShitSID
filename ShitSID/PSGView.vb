@@ -59,14 +59,14 @@ Public Class PSGView
 
         g.DrawString("Duty:", CommonFont, Brushes.White, cX(2), cY(24 + yOffset))
         ' ---
-        Dim filled = CInt(SID.Voices(idx).DutyCycle * 160)
-        g.FillRectangle(ScrollbarForegroundBrush, 35, 24 + yOffset, CInt(SID.Voices(idx).DutyCycle * 160), 7)
+        Dim filled = CInt(SID.Voices(idx).DutyCycle * 0.0390720390720391)
+        g.FillRectangle(ScrollbarForegroundBrush, 35, 24 + yOffset, CInt(SID.Voices(idx).DutyCycle * 0.0390720390720391), 7)
         Dim remainder = 160 - filled
         g.FillRectangle(BarBackgroundBrush, 194 - remainder, 24 + yOffset, remainder, 7)
 
         g.DrawRectangle(ScrollbarTrackOuterPen, 35 + filled - 1, 23 + yOffset, 2, 9)
         g.DrawLine(ScrollbarTrackInnerPen, 35 + filled, 24 + yOffset, 35 + filled, 31 + yOffset)
-        g.DrawString(Math.Floor(SID.Voices(idx).DutyCycle * 4095), CommonFont, Brushes.White, cX(200), cY(24 + yOffset))
+        g.DrawString(Math.Floor(SID.Voices(idx).DutyCycle), CommonFont, Brushes.White, cX(200), cY(24 + yOffset))
 
 
         g.DrawString("Pitch:", CommonFont, Brushes.White, cX(2), cY(34 + yOffset))
@@ -132,7 +132,7 @@ CommonFont, Brushes.White, cX(120), cY(44 + yOffset))
         g.DrawImageUnscaled(My.Resources.PSGViewResources.filt_hp, 78, 176)
 
         g.DrawString("Resonance:", CommonFont, Brushes.White, cX(97), cY(176))
-        Dim filled = (SID.GetResonance \ 15) * 48
+        Dim filled As Integer = (SID.GetResonance / 15) * 48
         Dim remainder = 48 - filled
         g.FillRectangle(ProgressBarForegroundBrush, 154, 176, filled, 7)
         g.FillRectangle(BarBackgroundBrush, 202 - remainder, 176, remainder, 7)

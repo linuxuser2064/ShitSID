@@ -1,5 +1,5 @@
 ﻿Partial Class Voice
-	Dim SawTriWF6581 As Byte() = {
+	Dim SawTriWF6581 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
@@ -343,7 +343,7 @@
 	&HFC, &HFC, &HFC, &HFC, &HFC, &HFC, &HFE, &HFE, &HFE, &HFE, &HFF, &HFF,
 	&HFF, &HFF, &HFF, &HFF
 }
-	Dim TriPulseWF6581 As Byte() = {
+	Dim TriPulseWF6581 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
@@ -687,7 +687,7 @@
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0
 }
-	Dim SawPulseWF6581 As Byte() = {
+	Dim SawPulseWF6581 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
@@ -1031,7 +1031,7 @@
 	&HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF,
 	&HFF, &HFF, &HFF, &HFF
 }
-	Dim SawTriPulseWF6581 As Byte() = {
+	Dim SawTriPulseWF6581 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
@@ -1376,7 +1376,7 @@
 	&HFF, &HFF, &HFF, &HFF
 }
 
-	Dim SawTriWF8580 As Byte() = {
+	Dim SawTriWF8580 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
@@ -1720,7 +1720,7 @@
 	&HFE, &HFE, &HFE, &HFE, &HFE, &HFE, &HFE, &HFE, &HFF, &HFF, &HFF, &HFF,
 	&HFF, &HFF, &HFF, &HFF
 }
-	Dim TriPulseWF8580 As Byte() = {
+	Dim TriPulseWF8580 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
@@ -2064,7 +2064,7 @@
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0
 }
-	Dim SawPulseWF8580 As Byte() = {
+	Dim SawPulseWF8580 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
@@ -2408,7 +2408,7 @@
 	&HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &HFF,
 	&HFF, &HFF, &HFF, &HFF
 }
-	Dim SawTriPulseWF8580 As Byte() = {
+	Dim SawTriPulseWF8580 As UShort() = {
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
 	&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0,
