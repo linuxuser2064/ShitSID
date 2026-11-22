@@ -39,7 +39,6 @@
         FilterFP.setCurveAndDistortionDefaults()
     End Sub
 
-
     Public Sub New(Optional samplerate As Int32 = 44100)
         Me.SampleRate = samplerate
         'Filter = New SIDFilter(Me, samplerate * 2) ' run double oversampling
@@ -56,7 +55,7 @@
         Next
     End Sub
     Public Overrides Sub Clock()
-        CurrentTime += 1.0 / ClocksPerFrame
+        'CurrentTime += 1.0 / ClocksPerFrame
         For i = 0 To 2
             Voices(i).Clock()
             Voices(i).Envelope.Clock()
@@ -112,60 +111,27 @@
 
         Return hpOut
     End Function
+    Dim generateds(2) As Double
     Public Overrides Function GetSample() As Double
-        'Dim output As Double = 0
-        'Dim filterInput As Double = 0
-        'For i = 0 To 2
-        '    Dim v = Voices(i)
-        '    Dim generated = v.Generate() ' generate anyway for ringmod accuracy
-        '    If v.UseFilter AndAlso BypassFilter = False Then
-        '        filterInput += generated
-        '    Else
-        '        If Not (MuteVoice3 AndAlso i = 2) Then
-        '            output += generated
-        '        End If
-        '    End If
-        'Next
-        'If Not BypassFilter Then
-        '    output += {Filter.ApplyFilter(filterInput), Filter.ApplyFilter(filterInput)}.Average
-        'End If
-        'If Not MuteSamples Then
-        '    If Not VolumeSampleMode Then
-        '        output *= VolumeRegister / 15.0
-        '        output += (VolumeRegister - 15) / 6
-        '    Else
-        '        output += (VolumeRegister - 15) / 6
-        '    End If
-        'End If
-        'output /= 4
-        ''output = output - (output * output) ' holy distortion
-        'If InternalAudioFilter Then
-        '    Return LowPassSample(output, 20154, SampleRate)
-        'Else
-        '    Return output
-        'End If
         Dim output As Double = 0
-        'Dim filterInput As Double = 0
-        Dim generateds(2) As Single
         For i = 0 To 2
             Dim v = Voices(i)
             Dim generated = v.Generate() ' generate anyway for ringmod accuracy
             generateds(i) = (generated + FilterBias) * FilterMultiplier
-            'If v.UseFilter AndAlso BypassFilter = False Then
-            '    filterInput += generated
-            'Else
-            '    If Not (MuteVoice3 AndAlso i = 2) Then
-            '        output += generated
-            '    End If
-            'End If
         Next
         If Not BypassFilter Then
-            output += {FilterFP.Clock(generateds(0), generateds(1), generateds(2), 0) / (FilterMultiplier),
-                FilterFP.Clock(generateds(0), generateds(1), generateds(2), 0) / (FilterMultiplier)}.Average
+            ' oversampling
+            output += (FilterFP.Clock(generateds(0), generateds(1), generateds(2), 0) / FilterMultiplier +
+                       FilterFP.Clock(generateds(0), generateds(1), generateds(2), 0) / FilterMultiplier) / 2
+        Else
+            output += (generateds(0) - FilterBias) / FilterMultiplier
+            output += (generateds(1) - FilterBias) / FilterMultiplier
+            output += (generateds(2) - FilterBias) / FilterMultiplier
         End If
         Dim PCMAttenuation = 0.1875
         If (Voices(0).UseFilter Or Voices(1).UseFilter Or Voices(2).UseFilter) And
-            (Not (Voices(0).UseFilter And Voices(1).UseFilter And Voices(2).UseFilter)) Then
+            (Not (Voices(0).UseFilter And Voices(1).UseFilter And Voices(2).UseFilter)) Then ' actual logic based on observation
+
             PCMAttenuation *= 0.275
         End If
         If Not MuteSamples Then
@@ -221,13 +187,8 @@
                 Return
             Case &HD418
                 Dim bits As New BitArray({value})
-                'FilterMode = 0
-                'If bits(4) Then FilterMode += SIDFilter.EFilterType.LowPass
-                'If bits(5) Then FilterMode += SIDFilter.EFilterType.BandPass
-                'If bits(6) Then FilterMode += SIDFilter.EFilterType.HighPass
                 MuteVoice3 = bits(7)
                 VolumeRegister = value And &HF
-                'UpdateFilterSettings()
                 Return
         End Select
 
@@ -258,50 +219,14 @@
         End Select
     End Sub
     Protected Overrides Sub UpdateFilterSettings()
-        'Dim msbPart As Integer = FilterCutoffHi << 3
-        'Dim lsbPart As Integer = FilterCutoffLo And &H7 ' 11 bit is cursed
-        'Dim combined As UShort = CUInt(msbPart Or lsbPart)
-        'Dim cutoff = combined
-        'Filter.SetCutoff(cutoff)
-        'Filter.SetResonance(FilterResonance)
-        'Dim mode As SIDFilter.EFilterType = SIDFilter.EFilterType.None
-        'If (FilterMode And 1) <> 0 Then mode = mode Or SIDFilter.EFilterType.LowPass
-        'If (FilterMode And 2) <> 0 Then mode = mode Or SIDFilter.EFilterType.BandPass
-        'If (FilterMode And 4) <> 0 Then mode = mode Or SIDFilter.EFilterType.HighPass
-        'Filter.SetFilterType(mode)
-        'Dim msbPart As Integer = FilterCutoffHi << 3
-        'Dim lsbPart As Integer = FilterCutoffLo And &H7
-        'Dim cutoff As UShort = CUShort(msbPart Or lsbPart)
-
-        '' Pack into the two FC register bytes the way the hardware does
-        ''Console.WriteLine($"Lo: {CByte(cutoff And &H7)}  Hi: {CByte((cutoff >> 3) And &HFF)}")
-        'Filter.WriteFC_LO(CByte(cutoff And &H7))
-        'Filter.WriteFC_HI(CByte((cutoff >> 3) And &HFF))
-
-        '' Pack resonance + voice routing into RES_FILT byte
-        'Dim res_filt As Byte = CByte((FilterResonance And &HF) << 4)
-        'If Voices(0).UseFilter Then res_filt = res_filt Or &H1
-        'If Voices(1).UseFilter Then res_filt = res_filt Or &H2
-        'If Voices(2).UseFilter Then res_filt = res_filt Or &H4
-        'Filter.WriteRES_FILT(res_filt)
-
-        '' Pack mode + volume into MODE_VOL byte
-        'Dim mode_vol As Byte = VolumeRegister And &HF
-        'If (FilterMode And SIDFilter.EFilterType.LowPass) <> 0 Then mode_vol = mode_vol Or &H10
-        'If (FilterMode And SIDFilter.EFilterType.BandPass) <> 0 Then mode_vol = mode_vol Or &H20
-        'If (FilterMode And SIDFilter.EFilterType.HighPass) <> 0 Then mode_vol = mode_vol Or &H40
-        'If MuteVoice3 Then mode_vol = mode_vol Or &H80   ' bit 7 = voice3 mute (inverted in WriteMODE_VOL)
-        'Filter.WriteMODE_VOL(mode_vol)
         FilterFP.writeFC_HI(SIDRegisters(&H16))
         FilterFP.writeFC_LO(SIDRegisters(&H15))
         FilterFP.writeRES_FILT(SIDRegisters(&H17))
         FilterFP.writeMODE_VOL(SIDRegisters(&H18))
     End Sub
     Public Overrides Sub Reset()
-        CurrentTime = 0
-        'Filter = New SIDFilter(Me, SampleRate)
-        FilterFP = New Filter6581()
-        'Filter.SetClockFrequency(985248.0)
+        'CurrentTime = 0
+        FilterFP = New Filter6581
         For i As Integer = 0 To 2
             Voices(i) = New Voice(Me, i)
         Next
